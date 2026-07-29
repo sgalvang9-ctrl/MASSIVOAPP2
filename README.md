@@ -1,24 +1,35 @@
 # MasivoApp — Promos por WhatsApp (v2)
 
-App de una sola página (sin backend) para que los ejecutivos manden promos por WhatsApp a su cartera, en tandas seguras.
+App de una sola página (sin backend) para que los ejecutivos manden promos por WhatsApp a su cartera, en tandas seguras. Instalable como app (PWA).
 
-Ver `index.html` para el código completo. No requiere build ni instalación de dependencias — es HTML/CSS/JS puro, con SheetJS cargado desde CDN para leer Excel/CSV.
+## Archivos del repo
+
+- `index.html` — la app completa
+- `manifest.json` — configuración para que sea instalable como app
+- `sw.js` — service worker (funcionamiento offline del cascarón de la app)
+- `icons/` — íconos para la pantalla de inicio
+- `netlify.toml` — config de publish + header noindex
+- `README.md` — este archivo
 
 ## Qué mejora esta versión
 
 - Configuración por ejecutivo/tienda (ya no hardcodeada a una sola sucursal)
 - Normalización de números MX + deduplicación automática
-- Rate limiter duro (tandas + pausa obligatoria, no solo consejo)
+- Rate limiter por tandas + tope duro de mensajes por bloque de horas (ventana móvil)
+- Horario de envío restringido (regla dura, configurable)
 - Lista de bajas persistente por tienda
 - Generador de plantilla con identificación + línea de BAJA
 - Checkbox de consentimiento antes de habilitar envíos
 - Aviso de privacidad simplificado
+- Reporte descargable en PDF (automático por tanda + botón manual)
+- Exportar / importar respaldo del historial y las bajas
 - Manejo de errores al leer el archivo
+- **Instalable como app** (agregar a pantalla de inicio, funciona offline el cascarón)
 - `noindex` para no aparecer en buscadores
 
 ## Cómo desplegar en Netlify (primera vez)
 
-1. Crea un repositorio nuevo en GitHub (puede ser privado) y sube estos archivos.
+1. Crea un repositorio nuevo en GitHub (puede ser privado) y sube **todos** los archivos, incluyendo la carpeta `icons/` completa.
 2. Entra a [app.netlify.com](https://app.netlify.com) → **Add new project** → **Import an existing project**.
 3. Conecta tu cuenta de GitHub y autoriza acceso al repo.
 4. Selecciona el repo. Build command: déjalo vacío. Publish directory: `.` (ya viene configurado en `netlify.toml`).
@@ -26,17 +37,15 @@ Ver `index.html` para el código completo. No requiere build ni instalación de 
 
 ## Cómo actualizar después
 
-Cada vez que hagas push a la rama principal (`main`), Netlify vuelve a desplegar solo. No necesitas tocar nada en el dashboard.
+Cada vez que hagas push a la rama principal (`main`), Netlify vuelve a desplegar solo.
 
-```bash
-git add .
-git commit -m "descripción del cambio"
-git push
-```
+## Cómo instalarla como app (para cada ejecutivo)
 
-## Cómo subirlo sin GitHub (más rápido, pero sin historial de cambios)
+**Android (Chrome):** abre la URL → menú ⋮ → "Instalar app" o "Agregar a pantalla de inicio".
 
-En Netlify, ve a tu sitio → **Deploys** → arrastra la carpeta completa (o el `index.html`) a la zona de "Drag and drop". Esto reemplaza el sitio en el momento, pero no queda respaldado en ningún repo.
+**iPhone (Safari):** abre la URL → botón de compartir (el cuadrito con la flecha) → "Agregar a pantalla de inicio". En iPhone tiene que ser desde Safari, no desde Chrome — es una limitación de iOS, no de la app.
+
+Una vez instalada, se abre en pantalla completa como cualquier app, sin la barra del navegador.
 
 ## Pendiente para la siguiente fase (Sprint 1)
 
@@ -47,3 +56,4 @@ Los hallazgos que esta versión **no** resuelve porque requieren backend (ver au
 - H-04: no hay login — cualquiera con la URL puede usar la app
 
 Eso implica Firebase Auth + Firestore, descrito en la sección "Arquitectura objetivo (v2)" del documento de auditoría.
+
