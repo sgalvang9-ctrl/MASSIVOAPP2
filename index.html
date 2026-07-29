@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Promos por WhatsApp — Prime MX</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --navy:#0b2545;
@@ -251,11 +252,6 @@
     <input type="text" id="atajo" placeholder="renovacion">
     <div class="helper">El chat se abrirá con <b><span id="atajoPreview">/renovacion</span></b> escrito. Solo la <b>/</b> abre el menú de respuestas; con el atajo completo vas directo a esa.</div>
 
-    <div class="toggle-row">
-      <span>📱 Forzar apertura en WhatsApp Business</span>
-      <label class="switch"><input type="checkbox" id="forceWaB" checked><span class="slider"></span></label>
-    </div>
-
     <details>
       <summary>🛠️ ¿Cómo creo mi respuesta rápida con el flyer?</summary>
       <ol>
@@ -285,7 +281,7 @@
     <h2>Envía de corrido, en tandas seguras</h2>
 
     <div class="statgrid">
-      <div class="stat"><div class="num" id="statEnviados">0</div><div class="lbl">Contactados</div></div>
+      <div class="stat"><div class="num" id="statEnviados">0</div><div class="lbl">Atendidos</div></div>
       <div class="stat"><div class="num" id="statPendientes">0</div><div class="lbl">Pendientes</div></div>
     </div>
     <div class="progressbar"><div class="fill" id="progFill" style="width:0%"></div></div>
@@ -302,18 +298,51 @@
       </div>
     </div>
 
+    <div class="row2">
+      <div>
+        <label>Tope duro de mensajes</label>
+        <input type="number" id="cfgHardLimit" value="30" min="5" max="200">
+      </div>
+      <div>
+        <label>Cada cuántas horas</label>
+        <input type="number" id="cfgHardWindow" value="4" min="1" max="24">
+      </div>
+    </div>
+    <div class="helper" style="margin-top:8px;">Este tope es aparte de las pausas por tanda: aunque respetes las pausas cortas, la app no te deja pasar de <b><span id="hardLimitPreview">30</span></b> mensajes cada <b><span id="hardWindowPreview">4</span></b> horas.</div>
+
+    <div class="toggle-row">
+      <span>🕘 Restringir horario de envío</span>
+      <label class="switch"><input type="checkbox" id="chkHorario" checked><span class="slider"></span></label>
+    </div>
+    <div class="row2" id="horarioInputs">
+      <div>
+        <label>Desde (hora)</label>
+        <input type="number" id="cfgHoraDesde" value="9" min="0" max="23">
+      </div>
+      <div>
+        <label>Hasta (hora)</label>
+        <input type="number" id="cfgHoraHasta" value="20" min="0" max="23">
+      </div>
+    </div>
+
     <div id="lockBanner" class="lock-banner hidden"></div>
 
     <div class="pill-toggle" style="margin-top:14px;">
       <button id="filtroPendientes" class="active">⏳ Pendientes</button>
       <button id="filtroTodos">📋 Todos</button>
-      <button id="filtroBajas">🚫 Bajas</button>
+      <button id="filtroBajas">Bajas</button>
     </div>
 
     <div id="queueList"></div>
     <div id="queueEmpty" class="empty hidden">Sube tu archivo en el Paso 1 para ver tu lista aquí.</div>
 
-    <button class="btn btn-danger-ghost btn-sm" id="btnReset" style="margin-top:14px;">🔄 Reiniciar historial de esta lista</button>
+    <button class="btn btn-ghost btn-sm" id="btnReporte" style="margin-top:14px;">📊 Generar reporte (PDF)</button>
+    <div class="row2" style="margin-top:8px;">
+      <button class="btn btn-ghost btn-sm" id="btnExportar">⬇️ Exportar respaldo</button>
+      <button class="btn btn-ghost btn-sm" id="btnImportar">⬆️ Importar respaldo</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json" style="display:none;">
+    <button class="btn btn-danger-ghost btn-sm" id="btnReset" style="margin-top:8px;">🔄 Reiniciar historial de esta lista</button>
   </section>
 
   <!-- CONSEJOS -->
@@ -345,6 +374,7 @@
   var STORAGE_PREFIX = "masivo_v2_";
   var config = {};
   var contacts = []; // {name, phone, raw}
+  var cleanStats = {validos:0, duplicados:0, invalidos:0, enBaja:0, procesadoEn:null};
   var filtroActual = "pendientes";
   var lockUntil = 0;
   var lockTimer = null;
@@ -506,6 +536,7 @@
     }
 
     contacts = validos;
+    cleanStats = {validos: validos.length, duplicados: duplicados, invalidos: invalidos, enBaja: enBaja, procesadoEn: Date.now()};
     document.getElementById("repValidos").textContent = validos.length;
     document.getElementById("repDuplicados").textContent = duplicados;
     document.getElementById("repInvalidos").textContent = invalidos;
@@ -597,8 +628,8 @@
       item.className = "queue-item";
 
       var status = "";
-      if(suppressed[c.phone]) status = "<span class=\"badge badge-bad\">🚫 Baja</span>";
-      else if(sent[c.phone]) status = "<span class=\"badge badge-good\">✅ Enviado</span>";
+      if(suppressed[c.phone]) status = "<span class=\"badge badge-bad\">Baja</span>";
+      else if(sent[c.phone]) status = "<span class=\"badge badge-good\">✅ Atendido</span>";
       else status = "<span class=\"badge badge-warn\">⏳ Pendiente</span>";
 
       item.innerHTML =
@@ -620,7 +651,9 @@
 
         var bajaBtn = document.createElement("button");
         bajaBtn.className = "iconbtn baja";
-        bajaBtn.textContent = "🚫";
+        bajaBtn.textContent = "Baja";
+        bajaBtn.style.fontSize = "11px";
+        bajaBtn.style.fontWeight = "700";
         bajaBtn.title = "Marcar como baja";
         bajaBtn.addEventListener("click", function(){
           if(confirm("¿" + (c.name || c.phone) + " pidió no recibir más mensajes?")){
@@ -649,6 +682,7 @@
     });
 
     updateStats();
+    checkLock();
   }
 
   function updateStats(){
@@ -664,16 +698,72 @@
     document.getElementById("progPct").textContent = pct + "%";
   }
 
+  function getHardLimitUnlockTime(){
+    var limit = parseInt(document.getElementById("cfgHardLimit").value, 10) || 30;
+    var windowHrs = parseFloat(document.getElementById("cfgHardWindow").value) || 4;
+    var windowMs = windowHrs * 3600000;
+    var now = Date.now();
+    var sent = getSent();
+    var recentTs = Object.keys(sent)
+      .map(function(k){ return sent[k].ts; })
+      .filter(function(ts){ return ts && (now - ts) < windowMs; })
+      .sort(function(a,b){ return a-b; });
+    if(recentTs.length < limit) return 0;
+    // se libera un lugar cuando el envío más viejo de la ventana "sale" de la ventana
+    var oldestRelevant = recentTs[recentTs.length - limit];
+    return oldestRelevant + windowMs;
+  }
+
+  function checkSchedule(){
+    var enabled = document.getElementById("chkHorario").checked;
+    if(!enabled) return false;
+    var desde = parseInt(document.getElementById("cfgHoraDesde").value, 10);
+    var hasta = parseInt(document.getElementById("cfgHoraHasta").value, 10);
+    var hr = new Date().getHours();
+    if(isNaN(desde) || isNaN(hasta)) return false;
+    if(desde <= hasta){
+      return hr < desde || hr >= hasta;
+    }else{
+      // rango que cruza medianoche, ej. 22 a 6
+      return hr < desde && hr >= hasta;
+    }
+  }
+
   function checkLock(){
     var now = Date.now();
-    if(now < lockUntil){
+    var banner = document.getElementById("lockBanner");
+
+    if(checkSchedule()){
+      var desde = document.getElementById("cfgHoraDesde").value;
+      var hasta = document.getElementById("cfgHoraHasta").value;
+      banner.textContent = "🌙 Fuera de horario permitido de envío (" + desde + ":00 a " + hasta + ":00). Vuelve dentro de ese rango.";
+      banner.classList.remove("hidden");
+      return true;
+    }
+
+    var hardUnlock = getHardLimitUnlockTime();
+    var tandaLock = now < lockUntil;
+    var hardLock = now < hardUnlock;
+
+    if(hardLock){
+      var mins2 = Math.ceil((hardUnlock - now)/60000);
+      var hrs = Math.floor(mins2/60), rem = mins2%60;
+      var limit = parseInt(document.getElementById("cfgHardLimit").value, 10) || 30;
+      var windowHrs = document.getElementById("cfgHardWindow").value || 4;
+      banner.textContent = "🛑 Llegaste al tope de " + limit + " mensajes cada " + windowHrs + " h. Espera " +
+        (hrs > 0 ? hrs + "h " + rem + "min" : rem + " min") + " para seguir. Este tope no se puede saltar.";
+      banner.classList.remove("hidden");
+      return true;
+    }
+
+    if(tandaLock){
       var mins = Math.ceil((lockUntil - now)/60000);
-      var banner = document.getElementById("lockBanner");
       banner.textContent = "⏸️ Tanda completa. Pausa obligatoria: espera " + mins + " min antes de seguir enviando. Esto protege tu número.";
       banner.classList.remove("hidden");
       return true;
     }
-    document.getElementById("lockBanner").classList.add("hidden");
+
+    banner.classList.add("hidden");
     return false;
   }
 
@@ -688,14 +778,7 @@
     var texto = encodeURIComponent("/" + atajo);
     var lada = config.lada || "52";
     var full = lada + c.phone;
-    var forceB = document.getElementById("forceWaB").checked;
-
-    var url;
-    if(forceB){
-      url = "intent://send?phone=" + full + "&text=" + texto + "#Intent;scheme=smsto;package=com.whatsapp.w4b;end";
-    }else{
-      url = "https://wa.me/" + full + "?text=" + texto;
-    }
+    var url = "https://wa.me/" + full + "?text=" + texto;
     window.open(url, "_blank");
 
     var sent = getSent();
@@ -711,6 +794,7 @@
       lockUntil = Date.now() + pausaMin*60000;
       batch.count = 0;
       startLockCountdown();
+      generarReportePDF("Tanda completa (" + tanda + " mensajes)");
     }
     saveJSON(nsKey("batchcount"), batch);
 
@@ -727,6 +811,119 @@
     }, 15000);
   }
 
+  ["chkHorario","cfgHoraDesde","cfgHoraHasta"].forEach(function(id){
+    document.getElementById(id).addEventListener("change", checkLock);
+  });
+
+  document.getElementById("cfgHardLimit").addEventListener("input", function(){
+    document.getElementById("hardLimitPreview").textContent = this.value || "30";
+    checkLock();
+  });
+  document.getElementById("cfgHardWindow").addEventListener("input", function(){
+    document.getElementById("hardWindowPreview").textContent = this.value || "4";
+    checkLock();
+  });
+
+  // ---------- respaldo ----------
+  document.getElementById("btnExportar").addEventListener("click", function(){
+    var backup = {
+      version: 2,
+      tienda: config.tienda,
+      ejecutivo: config.ejecutivo,
+      exportadoEn: new Date().toISOString(),
+      sent: getSent(),
+      suppressed: getSuppressed()
+    };
+    var blob = new Blob([JSON.stringify(backup, null, 2)], {type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var fecha = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = "respaldo_" + (config.tienda||"tienda").replace(/\s+/g,"-") + "_" + fecha + ".json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("btnImportar").addEventListener("click", function(){
+    document.getElementById("importFile").click();
+  });
+  document.getElementById("importFile").addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(evt){
+      try{
+        var backup = JSON.parse(evt.target.result);
+        if(!backup.sent || !backup.suppressed) throw new Error("formato inválido");
+        var currentSent = getSent();
+        var currentSup = getSuppressed();
+        Object.assign(currentSent, backup.sent);
+        Object.assign(currentSup, backup.suppressed);
+        setSent(currentSent);
+        setSuppressed(currentSup);
+        renderQueue();
+        alert("Respaldo importado. Se combinó con lo que ya tenías (no se borró nada).");
+      }catch(err){
+        alert("No pude leer ese archivo de respaldo. Revisa que sea el .json que exportó esta misma app.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  // ---------- reporte PDF ----------
+  function generarReportePDF(motivo){
+    if(!window.jspdf){ return; }
+    var jsPDFCtor = window.jspdf.jsPDF;
+    var doc = new jsPDFCtor({unit:"pt", format:"a4"});
+    var sent = getSent();
+    var suppressed = getSuppressed();
+    var enviados = Object.keys(sent).length;
+    var bajas = Object.keys(suppressed).length;
+    var fecha = new Date().toLocaleString("es-MX");
+
+    var y = 50;
+    doc.setFontSize(16); doc.setFont(undefined,"bold");
+    doc.text("Reporte de envíos — Promos por WhatsApp", 40, y); y+=22;
+    doc.setFontSize(10); doc.setFont(undefined,"normal");
+    doc.text("Tienda: " + (config.tienda||"—") + "   Ejecutivo: " + (config.ejecutivo||"—"), 40, y); y+=16;
+    doc.text("Generado: " + fecha, 40, y); y+=16;
+    doc.text("Motivo: " + motivo, 40, y); y+=28;
+
+    doc.setDrawColor(220); doc.line(40, y, 555, y); y+=24;
+
+    var rows = [
+      ["Números válidos en la lista", cleanStats.validos],
+      ["Duplicados quitados", cleanStats.duplicados],
+      ["Números inválidos", cleanStats.invalidos],
+      ["Ya estaban en bajas (excluidos al cargar)", cleanStats.enBaja],
+      ["Mensajes enviados hasta ahora", enviados],
+      ["Pendientes por enviar", Math.max(cleanStats.validos - enviados - bajas, 0)],
+      ["Total marcados como baja", bajas]
+    ];
+
+    doc.setFontSize(12);
+    rows.forEach(function(r){
+      doc.setFont(undefined,"normal");
+      doc.text(String(r[0]), 40, y);
+      doc.setFont(undefined,"bold");
+      doc.text(String(r[1]), 500, y, {align:"right"});
+      y += 22;
+    });
+
+    y += 10;
+    doc.setDrawColor(220); doc.line(40, y, 555, y); y+=20;
+    doc.setFontSize(9); doc.setFont(undefined,"normal"); doc.setTextColor(120);
+    doc.text("Reporte generado automáticamente por la app de promos por WhatsApp. Los datos existen solo en este dispositivo.", 40, y, {maxWidth:515});
+
+    var fnameFecha = new Date().toISOString().slice(0,16).replace(/[:T]/g,"-");
+    doc.save("reporte_" + (config.tienda||"tienda").replace(/\s+/g,"-") + "_" + fnameFecha + ".pdf");
+  }
+
+  document.getElementById("btnReporte").addEventListener("click", function(){
+    generarReportePDF("Solicitado manualmente");
+  });
+
   document.getElementById("btnReset").addEventListener("click", function(){
     if(!confirm("Esto borra el historial de enviados (no las bajas) de esta lista en este teléfono. ¿Seguro?")) return;
     setSent({});
@@ -736,6 +933,7 @@
 
   // ---------- init ----------
   initConfigScreen();
+  setInterval(checkLock, 15000);
 })();
 </script>
 </body>
