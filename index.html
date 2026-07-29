@@ -235,6 +235,8 @@
         <input type="checkbox" id="chkHeader" checked>
         <label style="margin:0;font-weight:400;">La 1ª fila son títulos</label>
       </div>
+      <label>No recontactar si ya se le mandó algo en los últimos (días)</label>
+      <input type="number" id="cfgEnfriamiento" value="21" min="0" max="365">
       <button class="btn btn-cyan" id="btnProcesar" style="margin-top:12px;">Procesar lista</button>
     </div>
 
@@ -246,8 +248,14 @@
         <div class="stat"><div class="num" id="repDuplicados">0</div><div class="lbl">Duplicados quitados</div></div>
         <div class="stat"><div class="num" id="repInvalidos">0</div><div class="lbl">Números inválidos</div></div>
         <div class="stat"><div class="num" id="repSuprimidos">0</div><div class="lbl">En lista de bajas</div></div>
+        <div class="stat"><div class="num" id="repEnfriamiento">0</div><div class="lbl">En enfriamiento</div></div>
       </div>
     </div>
+
+    <details id="bitacoraWrap" class="hidden">
+      <summary>📋 Historial de cargas de esta tienda</summary>
+      <div id="bitacoraList" style="margin-top:8px;font-size:12.5px;color:var(--ink-dim);"></div>
+    </details>
   </section>
 
   <!-- PASO 2: MENSAJE -->
@@ -286,6 +294,14 @@
   <section class="card">
     <div class="step-eyebrow"><span class="n">3</span> Envío</div>
     <h2>Envía de corrido, en tandas seguras</h2>
+
+    <div id="emergencyActive" class="hidden" style="background:var(--bad-bg);border:1.5px solid #f0c9c9;border-radius:10px;padding:14px;margin-bottom:14px;text-align:center;">
+      <div style="font-weight:800;color:var(--bad);font-size:14.5px;">🛑 Envío bloqueado — cuenta marcada como restringida</div>
+      <div style="font-size:12.5px;color:var(--ink-dim);margin-top:4px;">Nadie puede enviar desde este dispositivo hasta que lo reactives.</div>
+      <button class="btn btn-ghost btn-sm" id="btnReactivar" style="margin-top:10px;width:auto;padding:8px 16px;">✅ Ya puedo volver a enviar</button>
+    </div>
+
+    <button class="btn btn-danger-ghost btn-sm" id="btnEmergencia" style="margin-bottom:14px;">🛑 Mi cuenta fue restringida — parar todo</button>
 
     <div class="statgrid">
       <div class="stat"><div class="num" id="statEnviados">0</div><div class="lbl">Atendidos</div></div>
@@ -381,7 +397,7 @@
   var STORAGE_PREFIX = "masivo_v2_";
   var config = {};
   var contacts = []; // {name, phone, raw}
-  var cleanStats = {validos:0, duplicados:0, invalidos:0, enBaja:0, procesadoEn:null};
+  var cleanStats = {validos:0, duplicados:0, invalidos:0, enBaja:0, enEnfriamiento:0, procesadoEn:null};
   var filtroActual = "pendientes";
   var lockUntil = 0;
   var lockTimer = null;
@@ -449,8 +465,8 @@
     document.getElementById("restOfApp").classList.remove("hidden");
     renderQueue();
     updateStats();
+    renderBitacora();
   }
-  // permite reconfigurar tocando la píldora
   document.getElementById("storePill").addEventListener("click", function(){
     document.getElementById("cardConfig").classList.remove("hidden");
     document.getElementById("restOfApp").classList.add("hidden");
@@ -526,8 +542,12 @@
     var startRow = hasHeader ? 1 : 0;
 
     var suppressed = loadJSON(nsKey("suppressed"), {});
+    var sentHistory = getSent();
+    var cooldownDays = parseFloat(document.getElementById("cfgEnfriamiento").value) || 0;
+    var cooldownMs = cooldownDays * 86400000;
+    var now = Date.now();
     var seen = {};
-    var validos = [], duplicados = 0, invalidos = 0, enBaja = 0;
+    var validos = [], duplicados = 0, invalidos = 0, enBaja = 0, enEnfriamiento = 0;
 
     for(var r = startRow; r < rawRows.length; r++){
       var row = rawRows[r];
@@ -538,21 +558,64 @@
       if(!phone){ invalidos++; continue; }
       if(suppressed[phone]){ enBaja++; continue; }
       if(seen[phone]){ duplicados++; continue; }
+      if(cooldownMs > 0 && sentHistory[phone] && sentHistory[phone].ts && (now - sentHistory[phone].ts) < cooldownMs){
+        enEnfriamiento++; continue;
+      }
       seen[phone] = true;
       validos.push({phone: phone, name: (rawName || "").toString().trim() || null});
     }
 
     contacts = validos;
-    cleanStats = {validos: validos.length, duplicados: duplicados, invalidos: invalidos, enBaja: enBaja, procesadoEn: Date.now()};
+    cleanStats = {validos: validos.length, duplicados: duplicados, invalidos: invalidos, enBaja: enBaja, enEnfriamiento: enEnfriamiento, procesadoEn: Date.now()};
     document.getElementById("repValidos").textContent = validos.length;
     document.getElementById("repDuplicados").textContent = duplicados;
     document.getElementById("repInvalidos").textContent = invalidos;
     document.getElementById("repSuprimidos").textContent = enBaja;
+    document.getElementById("repEnfriamiento").textContent = enEnfriamiento;
     document.getElementById("cleanReport").classList.remove("hidden");
 
+    logUpload(cleanStats);
     renderQueue();
     updateStats();
   });
+
+  // ---------- bitácora de cargas ----------
+  function getUploadLog(){ return loadJSON(nsKey("uploadlog"), []); }
+  function logUpload(stats){
+    var log = getUploadLog();
+    log.unshift({
+      ts: stats.procesadoEn,
+      ejecutivo: config.ejecutivo,
+      validos: stats.validos,
+      duplicados: stats.duplicados,
+      invalidos: stats.invalidos,
+      enBaja: stats.enBaja,
+      enEnfriamiento: stats.enEnfriamiento
+    });
+    if(log.length > 50) log = log.slice(0,50); // no crecer sin límite
+    saveJSON(nsKey("uploadlog"), log);
+    renderBitacora();
+  }
+  function renderBitacora(){
+    var log = getUploadLog();
+    var wrap = document.getElementById("bitacoraWrap");
+    var list = document.getElementById("bitacoraList");
+    if(!log.length){ wrap.classList.add("hidden"); return; }
+    wrap.classList.remove("hidden");
+    list.innerHTML = log.map(function(e){
+      var f = new Date(e.ts).toLocaleString("es-MX");
+      if(e.evento){
+        return "<div style='padding:6px 0;border-bottom:1px solid var(--line);color:var(--bad);font-weight:700;'>" +
+          "⚠️ " + f + " — " + e.evento + " (" + e.ejecutivo + ")" +
+          "</div>";
+      }
+      return "<div style='padding:6px 0;border-bottom:1px solid var(--line);'>" +
+        "<b>" + f + "</b> — " + e.ejecutivo + "<br>" +
+        e.validos + " válidos · " + e.duplicados + " duplicados · " + e.invalidos + " inválidos · " +
+        e.enBaja + " en bajas · " + e.enEnfriamiento + " en enfriamiento" +
+        "</div>";
+    }).join("");
+  }
 
   // ---------- paso 2: mensaje ----------
   var atajoInput = document.getElementById("atajo");
@@ -736,9 +799,23 @@
     }
   }
 
+  function getEmergency(){ return loadJSON(nsKey("emergency"), null); }
+  function setEmergency(v){ saveJSON(nsKey("emergency"), v); }
+
   function checkLock(){
     var now = Date.now();
     var banner = document.getElementById("lockBanner");
+
+    var emergency = getEmergency();
+    if(emergency && emergency.active){
+      document.getElementById("emergencyActive").classList.remove("hidden");
+      document.getElementById("btnEmergencia").classList.add("hidden");
+      banner.classList.add("hidden");
+      return true;
+    }else{
+      document.getElementById("emergencyActive").classList.add("hidden");
+      document.getElementById("btnEmergencia").classList.remove("hidden");
+    }
 
     if(checkSchedule()){
       var desde = document.getElementById("cfgHoraDesde").value;
@@ -839,7 +916,9 @@
       ejecutivo: config.ejecutivo,
       exportadoEn: new Date().toISOString(),
       sent: getSent(),
-      suppressed: getSuppressed()
+      suppressed: getSuppressed(),
+      uploadlog: getUploadLog(),
+      emergency: getEmergency()
     };
     var blob = new Blob([JSON.stringify(backup, null, 2)], {type:"application/json"});
     var url = URL.createObjectURL(blob);
@@ -868,6 +947,8 @@
         Object.assign(currentSup, backup.suppressed);
         setSent(currentSent);
         setSuppressed(currentSup);
+        if(backup.uploadlog){ saveJSON(nsKey("uploadlog"), backup.uploadlog); renderBitacora(); }
+        if(backup.emergency){ setEmergency(backup.emergency); checkLock(); }
         renderQueue();
         alert("Respaldo importado. Se combinó con lo que ya tenías (no se borró nada).");
       }catch(err){
@@ -904,10 +985,16 @@
       ["Duplicados quitados", cleanStats.duplicados],
       ["Números inválidos", cleanStats.invalidos],
       ["Ya estaban en bajas (excluidos al cargar)", cleanStats.enBaja],
+      ["En enfriamiento (contactados hace poco, excluidos)", cleanStats.enEnfriamiento],
       ["Mensajes enviados hasta ahora", enviados],
       ["Pendientes por enviar", Math.max(cleanStats.validos - enviados - bajas, 0)],
       ["Total marcados como baja", bajas]
     ];
+
+    var emergency = getEmergency();
+    if(emergency && emergency.active){
+      rows.push(["⚠️ Cuenta marcada como restringida desde", new Date(emergency.ts).toLocaleString("es-MX")]);
+    }
 
     doc.setFontSize(12);
     rows.forEach(function(r){
@@ -929,6 +1016,26 @@
 
   document.getElementById("btnReporte").addEventListener("click", function(){
     generarReportePDF("Solicitado manualmente");
+  });
+
+  document.getElementById("btnEmergencia").addEventListener("click", function(){
+    if(!confirm("Esto bloquea TODO envío desde este dispositivo hasta que lo reactives a mano. ¿Confirmas que tu cuenta fue restringida o baneada?")) return;
+    setEmergency({active:true, ts: Date.now(), ejecutivo: config.ejecutivo});
+    var log = getUploadLog();
+    log.unshift({ts: Date.now(), ejecutivo: config.ejecutivo, evento: "CUENTA RESTRINGIDA — envío pausado"});
+    saveJSON(nsKey("uploadlog"), log.slice(0,50));
+    renderBitacora();
+    checkLock();
+  });
+
+  document.getElementById("btnReactivar").addEventListener("click", function(){
+    if(!confirm("¿Confirmas que ya puedes volver a enviar desde este número?")) return;
+    setEmergency({active:false, ts: Date.now(), ejecutivo: config.ejecutivo});
+    var log = getUploadLog();
+    log.unshift({ts: Date.now(), ejecutivo: config.ejecutivo, evento: "Envío reactivado tras restricción"});
+    saveJSON(nsKey("uploadlog"), log.slice(0,50));
+    renderBitacora();
+    checkLock();
   });
 
   document.getElementById("btnReset").addEventListener("click", function(){
