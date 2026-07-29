@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Promos por WhatsApp — Prime MX</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy:#0b2545;
+    --navy-2:#123a6b;
+    --cyan:#00b6f1;
+    --cyan-dim:#00b6f122;
+    --paper:#f5f7fa;
+    --card:#ffffff;
+    --ink:#132033;
+    --ink-dim:#5c6b7d;
+    --line:#e1e6ec;
+    --good:#1e9e5a;
+    --good-bg:#e8f8ef;
+    --warn:#b8790a;
+    --warn-bg:#fdf1de;
+    --bad:#c53434;
+    --bad-bg:#fdeaea;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    padding-bottom:48px;
+  }
+  header.top{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff;
+    padding:22px 18px 26px;
+    border-radius:0 0 22px 22px;
+  }
+  .brandrow{display:flex;align-items:center;gap:10px;font-size:13px;opacity:.85;margin-bottom:10px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);}
+  header.top h1{margin:0 0 4px;font-size:22px;letter-spacing:-.02em;}
+  header.top p{margin:0;font-size:14px;opacity:.85;line-height:1.4;}
+  .storepill{
+    display:inline-flex;align-items:center;gap:6px;
+    margin-top:12px;background:rgba(255,255,255,.12);
+    padding:6px 12px;border-radius:999px;font-size:12.5px;
+  }
+  main{max-width:640px;margin:0 auto;padding:16px;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+    margin-bottom:14px;
+  }
+  .step-eyebrow{
+    display:flex;align-items:center;gap:8px;
+    font-size:11.5px;font-weight:700;color:var(--cyan);
+    text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;
+  }
+  .step-eyebrow .n{
+    width:20px;height:20px;border-radius:6px;background:var(--cyan-dim);
+    color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:12px;
+  }
+  h2{font-size:17px;margin:0 0 10px;}
+  label{display:block;font-size:13px;color:var(--ink-dim);margin:12px 0 5px;font-weight:600;}
+  label:first-of-type{margin-top:0;}
+  input[type=text],input[type=number],select{
+    width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;
+    font-size:15px;background:#fff;color:var(--ink);
+  }
+  input:focus,select:focus{outline:none;border-color:var(--cyan);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .filebox{
+    border:2px dashed var(--line);border-radius:12px;padding:22px 14px;
+    text-align:center;cursor:pointer;transition:.15s;background:#fafcfe;
+  }
+  .filebox:hover{border-color:var(--cyan);}
+  .filebox .ic{font-size:26px;}
+  .filebox .main{font-weight:600;font-size:14.5px;margin-top:4px;}
+  .filebox .sub{font-size:12px;color:var(--ink-dim);margin-top:2px;}
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    width:100%;padding:13px;border:none;border-radius:11px;
+    font-size:15px;font-weight:700;cursor:pointer;transition:.15s;
+  }
+  .btn-primary{background:var(--navy);color:#fff;}
+  .btn-primary:disabled{background:#b9c2cd;cursor:not-allowed;}
+  .btn-cyan{background:var(--cyan);color:var(--navy);}
+  .btn-cyan:disabled{background:#cfeaf5;color:#7fa8b8;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--navy);border:1.5px solid var(--line);}
+  .btn-danger-ghost{background:transparent;color:var(--bad);border:1.5px solid #f0c9c9;}
+  .btn-sm{padding:8px 10px;font-size:13px;width:auto;}
+  .checkrow{
+    display:flex;gap:10px;align-items:flex-start;background:var(--paper);
+    border-radius:10px;padding:12px;margin-top:12px;font-size:13.5px;line-height:1.45;
+  }
+  .checkrow input{width:auto;margin-top:2px;}
+  .toggle-row{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--paper);border-radius:10px;padding:11px 13px;margin-top:10px;font-size:13.5px;
+  }
+  .switch{position:relative;width:42px;height:24px;flex:none;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:#c9d1da;border-radius:999px;cursor:pointer;transition:.15s;}
+  .slider:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s;}
+  input:checked + .slider{background:var(--cyan);}
+  input:checked + .slider:before{transform:translateX(18px);}
+  .helper{
+    background:var(--paper);border-radius:10px;padding:12px 14px;margin-top:10px;font-size:13px;color:var(--ink-dim);line-height:1.5;
+  }
+  .helper b{color:var(--ink);}
+  details{margin-top:10px;}
+  summary{cursor:pointer;font-size:13.5px;font-weight:700;color:var(--navy);padding:4px 0;}
+  ol{margin:8px 0 0;padding-left:20px;font-size:13.5px;line-height:1.6;color:var(--ink-dim);}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;}
+  .badge-good{background:var(--good-bg);color:var(--good);}
+  .badge-warn{background:var(--warn-bg);color:var(--warn);}
+  .badge-bad{background:var(--bad-bg);color:var(--bad);}
+  .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;}
+  .stat{background:var(--paper);border-radius:10px;padding:12px;text-align:center;}
+  .stat .num{font-size:22px;font-weight:800;color:var(--navy);}
+  .stat .lbl{font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.03em;}
+  .progressbar{height:8px;background:var(--paper);border-radius:999px;overflow:hidden;margin:6px 0 4px;}
+  .progressbar .fill{height:100%;background:var(--cyan);border-radius:999px;transition:width .2s;}
+  .queue-item{
+    display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line);
+  }
+  .queue-item:last-child{border-bottom:none;}
+  .queue-item .info{flex:1;min-width:0;}
+  .queue-item .nm{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .queue-item .ph{font-size:12.5px;color:var(--ink-dim);}
+  .queue-item .acts{display:flex;gap:6px;flex:none;}
+  .iconbtn{
+    width:34px;height:34px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;
+  }
+  .iconbtn.wa{background:#1ea94c;border-color:#1ea94c;color:#fff;}
+  .iconbtn.baja{color:var(--bad);}
+  .pill-toggle{display:flex;gap:6px;margin-bottom:10px;}
+  .pill-toggle button{
+    flex:1;padding:8px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
+    font-size:12.5px;font-weight:600;color:var(--ink-dim);cursor:pointer;
+  }
+  .pill-toggle button.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .lock-banner{
+    background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:12px 14px;
+    font-size:13.5px;font-weight:600;text-align:center;margin-bottom:10px;
+  }
+  .empty{text-align:center;padding:30px 10px;color:var(--ink-dim);font-size:13.5px;}
+  textarea{
+    width:100%;min-height:80px;padding:11px 12px;border:1.5px solid var(--line);
+    border-radius:10px;font-size:14.5px;font-family:inherit;resize:vertical;color:var(--ink);
+  }
+  footer{max-width:640px;margin:20px auto 0;padding:0 16px;font-size:11.5px;color:var(--ink-dim);line-height:1.6;text-align:center;}
+  .tag-inline{background:var(--cyan-dim);color:var(--navy);border-radius:6px;padding:1px 6px;font-size:11.5px;font-weight:700;}
+  .hidden{display:none !important;}
+  #fileInput{display:none;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brandrow"><span class="dot"></span> AT&amp;T · Prime MX</div>
+  <h1>📲 Promos por WhatsApp</h1>
+  <p>Manda tus promociones a tu cartera, en tandas seguras y sin perder el hilo.</p>
+  <div class="storepill" id="storePill">⚙️ Configura tu tienda para empezar</div>
+</header>
+
+<main>
+
+  <!-- PASO 0: CONFIGURACIÓN -->
+  <section class="card" id="cardConfig">
+    <div class="step-eyebrow"><span class="n">0</span> Configuración</div>
+    <h2>¿Quién eres y dónde trabajas?</h2>
+    <p style="font-size:13px;color:var(--ink-dim);margin:0 0 4px;">Esto se guarda solo en este celular. No se sube a ningún servidor.</p>
+
+    <label>Tienda / punto de venta</label>
+    <input type="text" id="cfgTienda" placeholder="Ej. León Centro">
+
+    <div class="row2">
+      <div>
+        <label>Tu nombre</label>
+        <input type="text" id="cfgEjecutivo" placeholder="Ej. Sebastián Galván">
+      </div>
+      <div>
+        <label>Lada país</label>
+        <input type="text" id="cfgLada" value="52" placeholder="52">
+      </div>
+    </div>
+
+    <label>Nombre para identificarte en el mensaje</label>
+    <input type="text" id="cfgRemitente" placeholder="Ej. Sebastián de AT&T León Centro">
+
+    <button class="btn btn-primary" id="btnGuardarConfig" style="margin-top:16px;">Guardar y continuar</button>
+  </section>
+
+  <div id="restOfApp" class="hidden">
+
+  <!-- PASO 1: SUBIR LISTA -->
+  <section class="card">
+    <div class="step-eyebrow"><span class="n">1</span> Tu lista</div>
+    <h2>Sube tu cartera</h2>
+
+    <div class="filebox" id="fileBox">
+      <div class="ic">📄</div>
+      <div class="main">Toca para elegir tu archivo</div>
+      <div class="sub">.xlsx · .xls · .csv</div>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+
+    <div id="mapWrap" class="hidden">
+      <div class="row2">
+        <div>
+          <label>📞 Columna del número</label>
+          <select id="colPhone"></select>
+        </div>
+        <div>
+          <label>🙋 Columna del nombre (opcional)</label>
+          <select id="colName"></select>
+        </div>
+      </div>
+      <div class="checkrow">
+        <input type="checkbox" id="chkHeader" checked>
+        <label style="margin:0;font-weight:400;">La 1ª fila son títulos</label>
+      </div>
+      <button class="btn btn-cyan" id="btnProcesar" style="margin-top:12px;">Procesar lista</button>
+    </div>
+
+    <div id="fileError" class="lock-banner hidden" style="background:var(--bad-bg);color:var(--bad);"></div>
+
+    <div id="cleanReport" class="hidden" style="margin-top:12px;">
+      <div class="statgrid">
+        <div class="stat"><div class="num" id="repValidos">0</div><div class="lbl">Válidos</div></div>
+        <div class="stat"><div class="num" id="repDuplicados">0</div><div class="lbl">Duplicados quitados</div></div>
+        <div class="stat"><div class="num" id="repInvalidos">0</div><div class="lbl">Números inválidos</div></div>
+        <div class="stat"><div class="num" id="repSuprimidos">0</div><div class="lbl">En lista de bajas</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PASO 2: MENSAJE -->
+  <section class="card">
+    <div class="step-eyebrow"><span class="n">2</span> Tu mensaje</div>
+    <h2>Respuesta rápida + plantilla</h2>
+
+    <label>Atajo de tu respuesta rápida en WhatsApp Business</label>
+    <input type="text" id="atajo" placeholder="renovacion">
+    <div class="helper">El chat se abrirá con <b><span id="atajoPreview">/renovacion</span></b> escrito. Solo la <b>/</b> abre el menú de respuestas; con el atajo completo vas directo a esa.</div>
+
+    <div class="toggle-row">
+      <span>📱 Forzar apertura en WhatsApp Business</span>
+      <label class="switch"><input type="checkbox" id="forceWaB" checked><span class="slider"></span></label>
+    </div>
+
+    <details>
+      <summary>🛠️ ¿Cómo creo mi respuesta rápida con el flyer?</summary>
+      <ol>
+        <li>Abre <b>WhatsApp Business</b> → <b>⋮</b> → <b>Herramientas para la empresa</b> → <b>Respuestas rápidas</b>.</li>
+        <li>Toca <b>+</b> para crear una nueva.</li>
+        <li>Escribe tu texto de promo y adjunta el flyer con el clip 📎.</li>
+        <li>Incluye al final tu identificación y la línea de baja (usa el generador de abajo).</li>
+        <li>En "Atajo" pon el mismo que escribiste arriba.</li>
+      </ol>
+    </details>
+
+    <label style="margin-top:16px;">Generador de plantilla (opcional, para copiar a tu respuesta rápida)</label>
+    <textarea id="plantillaBase" placeholder="Ej. Hola {nombre}, tenemos promos especiales en renovación este mes con equipos desde $..."></textarea>
+    <button class="btn btn-ghost btn-sm" id="btnGenerarPlantilla" style="margin-top:8px;">Generar con identificación + baja</button>
+    <textarea id="plantillaFinal" readonly style="margin-top:8px;display:none;background:var(--paper);"></textarea>
+    <button class="btn btn-ghost btn-sm hidden" id="btnCopiarPlantilla" style="margin-top:8px;">📋 Copiar plantilla</button>
+
+    <div class="checkrow">
+      <input type="checkbox" id="chkConsentimiento">
+      <label style="margin:0;font-weight:400;">Confirmo que tengo consentimiento de estos clientes para contactarlos con fines mercadotécnicos y que consulté el <a href="#avisoPrivacidad" style="color:var(--navy);">aviso de privacidad</a>.</label>
+    </div>
+  </section>
+
+  <!-- PASO 3: ENVÍO -->
+  <section class="card">
+    <div class="step-eyebrow"><span class="n">3</span> Envío</div>
+    <h2>Envía de corrido, en tandas seguras</h2>
+
+    <div class="statgrid">
+      <div class="stat"><div class="num" id="statEnviados">0</div><div class="lbl">Contactados</div></div>
+      <div class="stat"><div class="num" id="statPendientes">0</div><div class="lbl">Pendientes</div></div>
+    </div>
+    <div class="progressbar"><div class="fill" id="progFill" style="width:0%"></div></div>
+    <div style="font-size:12px;color:var(--ink-dim);text-align:right;" id="progPct">0%</div>
+
+    <div class="row2" style="margin-top:12px;">
+      <div>
+        <label>Tamaño de tanda</label>
+        <input type="number" id="cfgTanda" value="15" min="5" max="40">
+      </div>
+      <div>
+        <label>Pausa entre tandas (min)</label>
+        <input type="number" id="cfgPausa" value="5" min="2" max="30">
+      </div>
+    </div>
+
+    <div id="lockBanner" class="lock-banner hidden"></div>
+
+    <div class="pill-toggle" style="margin-top:14px;">
+      <button id="filtroPendientes" class="active">⏳ Pendientes</button>
+      <button id="filtroTodos">📋 Todos</button>
+      <button id="filtroBajas">🚫 Bajas</button>
+    </div>
+
+    <div id="queueList"></div>
+    <div id="queueEmpty" class="empty hidden">Sube tu archivo en el Paso 1 para ver tu lista aquí.</div>
+
+    <button class="btn btn-danger-ghost btn-sm" id="btnReset" style="margin-top:14px;">🔄 Reiniciar historial de esta lista</button>
+  </section>
+
+  <!-- CONSEJOS -->
+  <section class="card">
+    <h2 style="font-size:15px;">💡 Para que no te bloqueen el número</h2>
+    <div class="helper" style="margin-top:0;">
+      🐢 No mandes cientos en pocos minutos — el rate limiter de arriba ya te obliga a pausar, respétalo.<br><br>
+      ⭐ Prioriza clientes que ya te conocen o que tienes guardados; casi no reportan.<br><br>
+      🚫 Si alguien te pide que no le escribas, márcalo como "baja" en la lista — no lo vuelvas a subir.<br><br>
+      🖼️ Manda el flyer con moderación; puros archivos idénticos también levantan sospecha.
+    </div>
+  </section>
+
+  </div><!-- /restOfApp -->
+
+</main>
+
+<footer id="avisoPrivacidad">
+  🔒 Tus datos se procesan solo en este teléfono; nada se sube a un servidor.<br>
+  <b>Aviso de privacidad simplificado:</b> los números y nombres que subes se usan únicamente para el envío manual de promociones AT&T por WhatsApp por parte del ejecutivo identificado arriba. No se comparten con terceros. El titular puede solicitar no ser contactado de nuevo respondiendo "BAJA" o pidiéndolo directamente al ejecutivo; esa solicitud debe marcarse en el Paso 3.<br><br>
+  💾 El historial de envíos y la lista de bajas se guardan solo en este navegador. Si cambias de equipo o limpias el caché, se pierden — considera exportar tu lista de bajas periódicamente.
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- estado ----------
+  var STORAGE_PREFIX = "masivo_v2_";
+  var config = {};
+  var contacts = []; // {name, phone, raw}
+  var filtroActual = "pendientes";
+  var lockUntil = 0;
+  var lockTimer = null;
+
+  // ---------- helpers de storage con namespace por tienda ----------
+  function nsKey(base){
+    var slug = (config.tienda || "default").toLowerCase().replace(/[^a-z0-9]+/g,"-");
+    return STORAGE_PREFIX + slug + "_" + base;
+  }
+  function loadJSON(key, fallback){
+    try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function saveJSON(key, val){
+    try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+  }
+
+  // ---------- normalización de teléfono MX ----------
+  // Devuelve 10 dígitos limpios, o null si no es válido.
+  function normalizePhone(raw){
+    if(raw === null || raw === undefined) return null;
+    var s = String(raw).replace(/[^\d]/g,"");
+    if(!s) return null;
+    // quita lada país 52 y el 1 de móvil que a veces trae el exportador (521XXXXXXXXXX)
+    if(s.length === 13 && s.startsWith("521")) s = s.slice(3);
+    else if(s.length === 12 && s.startsWith("52")) s = s.slice(2);
+    else if(s.length === 11 && s.startsWith("1")) s = s.slice(1);
+    if(s.length !== 10) return null;
+    // descarta obvios inválidos (todos el mismo dígito, o empieza en 0)
+    if(/^(\d)\1{9}$/.test(s)) return null;
+    return s;
+  }
+
+  // ---------- configuración ----------
+  function loadGlobalConfig(){
+    return loadJSON(STORAGE_PREFIX + "config", null);
+  }
+  function initConfigScreen(){
+    var saved = loadGlobalConfig();
+    if(saved){
+      config = saved;
+      document.getElementById("cfgTienda").value = config.tienda || "";
+      document.getElementById("cfgEjecutivo").value = config.ejecutivo || "";
+      document.getElementById("cfgLada").value = config.lada || "52";
+      document.getElementById("cfgRemitente").value = config.remitente || "";
+      showApp();
+    }
+  }
+  document.getElementById("btnGuardarConfig").addEventListener("click", function(){
+    var tienda = document.getElementById("cfgTienda").value.trim();
+    var ejecutivo = document.getElementById("cfgEjecutivo").value.trim();
+    var lada = document.getElementById("cfgLada").value.trim() || "52";
+    var remitente = document.getElementById("cfgRemitente").value.trim();
+    if(!tienda || !ejecutivo){
+      alert("Escribe al menos la tienda y tu nombre para continuar.");
+      return;
+    }
+    config = {tienda:tienda, ejecutivo:ejecutivo, lada:lada, remitente: remitente || ejecutivo};
+    saveJSON(STORAGE_PREFIX + "config", config);
+    showApp();
+  });
+  function showApp(){
+    document.getElementById("storePill").textContent = "🏬 " + config.tienda + " · " + config.ejecutivo;
+    document.getElementById("cardConfig").classList.add("hidden");
+    document.getElementById("restOfApp").classList.remove("hidden");
+    renderQueue();
+    updateStats();
+  }
+  // permite reconfigurar tocando la píldora
+  document.getElementById("storePill").addEventListener("click", function(){
+    document.getElementById("cardConfig").classList.remove("hidden");
+    document.getElementById("restOfApp").classList.add("hidden");
+  });
+
+  // ---------- paso 1: archivo ----------
+  var fileBox = document.getElementById("fileBox");
+  var fileInput = document.getElementById("fileInput");
+  var rawRows = [];
+  var headers = [];
+
+  fileBox.addEventListener("click", function(){ fileInput.click(); });
+
+  fileInput.addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var errBox = document.getElementById("fileError");
+    errBox.classList.add("hidden");
+    var reader = new FileReader();
+    reader.onerror = function(){
+      errBox.textContent = "No pude leer el archivo. Intenta de nuevo o revisa que no esté dañado.";
+      errBox.classList.remove("hidden");
+    };
+    reader.onload = function(evt){
+      try{
+        var data = new Uint8Array(evt.target.result);
+        var wb = XLSX.read(data, {type:"array"});
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:""});
+        if(!rows || !rows.length){
+          throw new Error("vacío");
+        }
+        rawRows = rows;
+        headers = rows[0].map(function(h,i){ return (h === "" ? ("Columna " + (i+1)) : String(h)); });
+        var maxCols = Math.max.apply(null, rows.map(function(r){return r.length;}));
+        if(headers.length < maxCols){
+          for(var i=headers.length;i<maxCols;i++) headers.push("Columna " + (i+1));
+        }
+        fillColumnSelectors();
+        document.getElementById("mapWrap").classList.remove("hidden");
+      }catch(err){
+        errBox.textContent = "No pude procesar ese archivo. Revisa que sea un .xlsx, .xls o .csv válido y que tenga al menos una columna con números.";
+        errBox.classList.remove("hidden");
+        document.getElementById("mapWrap").classList.add("hidden");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  function fillColumnSelectors(){
+    var selPhone = document.getElementById("colPhone");
+    var selName = document.getElementById("colName");
+    selPhone.innerHTML = "";
+    selName.innerHTML = "<option value=\"-1\">— Ninguna —</option>";
+    headers.forEach(function(h, i){
+      var o1 = document.createElement("option"); o1.value = i; o1.textContent = h;
+      selPhone.appendChild(o1);
+      var o2 = document.createElement("option"); o2.value = i; o2.textContent = h;
+      selName.appendChild(o2);
+    });
+    // intenta adivinar columnas por nombre
+    headers.forEach(function(h,i){
+      var low = h.toLowerCase();
+      if(/tel|cel|numero|número|phone/.test(low)) selPhone.value = i;
+      if(/nombre|cliente|name/.test(low)) selName.value = i;
+    });
+  }
+
+  document.getElementById("btnProcesar").addEventListener("click", function(){
+    var colPhoneIdx = parseInt(document.getElementById("colPhone").value, 10);
+    var colNameIdx = parseInt(document.getElementById("colName").value, 10);
+    var hasHeader = document.getElementById("chkHeader").checked;
+    var startRow = hasHeader ? 1 : 0;
+
+    var suppressed = loadJSON(nsKey("suppressed"), {});
+    var seen = {};
+    var validos = [], duplicados = 0, invalidos = 0, enBaja = 0;
+
+    for(var r = startRow; r < rawRows.length; r++){
+      var row = rawRows[r];
+      if(!row || !row.length) continue;
+      var rawPhone = row[colPhoneIdx];
+      var rawName = colNameIdx >= 0 ? row[colNameIdx] : "";
+      var phone = normalizePhone(rawPhone);
+      if(!phone){ invalidos++; continue; }
+      if(suppressed[phone]){ enBaja++; continue; }
+      if(seen[phone]){ duplicados++; continue; }
+      seen[phone] = true;
+      validos.push({phone: phone, name: (rawName || "").toString().trim() || null});
+    }
+
+    contacts = validos;
+    document.getElementById("repValidos").textContent = validos.length;
+    document.getElementById("repDuplicados").textContent = duplicados;
+    document.getElementById("repInvalidos").textContent = invalidos;
+    document.getElementById("repSuprimidos").textContent = enBaja;
+    document.getElementById("cleanReport").classList.remove("hidden");
+
+    renderQueue();
+    updateStats();
+  });
+
+  // ---------- paso 2: mensaje ----------
+  var atajoInput = document.getElementById("atajo");
+  atajoInput.addEventListener("input", function(){
+    var v = atajoInput.value.replace(/^\//,"").trim();
+    document.getElementById("atajoPreview").textContent = "/" + (v || "atajo");
+  });
+
+  document.getElementById("btnGenerarPlantilla").addEventListener("click", function(){
+    var base = document.getElementById("plantillaBase").value.trim();
+    if(!base){ alert("Escribe primero el texto base de tu promo."); return; }
+    var firma = "\n\n— " + (config.remitente || config.ejecutivo) + ", AT&T " + config.tienda;
+    var baja = "\n\nSi no quieres volver a recibir promos, responde BAJA.";
+    var final = base + firma + baja;
+    var box = document.getElementById("plantillaFinal");
+    box.value = final;
+    box.style.display = "block";
+    document.getElementById("btnCopiarPlantilla").classList.remove("hidden");
+  });
+
+  document.getElementById("btnCopiarPlantilla").addEventListener("click", function(){
+    var box = document.getElementById("plantillaFinal");
+    box.select();
+    box.setSelectionRange(0, 999999);
+    try{
+      navigator.clipboard.writeText(box.value);
+      this.textContent = "✅ Copiado";
+      setTimeout(function(){ document.getElementById("btnCopiarPlantilla").textContent = "📋 Copiar plantilla"; }, 1500);
+    }catch(e){
+      document.execCommand("copy");
+    }
+  });
+
+  // ---------- paso 3: cola de envío ----------
+  function getSent(){ return loadJSON(nsKey("sent"), {}); }
+  function setSent(v){ saveJSON(nsKey("sent"), v); }
+  function getSuppressed(){ return loadJSON(nsKey("suppressed"), {}); }
+  function setSuppressed(v){ saveJSON(nsKey("suppressed"), v); }
+  function getSentCountThisBatch(){ return loadJSON(nsKey("batchcount"), {count:0, since:0}); }
+
+  ["filtroPendientes","filtroTodos","filtroBajas"].forEach(function(id){
+    document.getElementById(id).addEventListener("click", function(){
+      document.querySelectorAll(".pill-toggle button").forEach(function(b){b.classList.remove("active");});
+      this.classList.add("active");
+      filtroActual = id === "filtroPendientes" ? "pendientes" : id === "filtroTodos" ? "todos" : "bajas";
+      renderQueue();
+    });
+  });
+
+  function renderQueue(){
+    var listEl = document.getElementById("queueList");
+    var emptyEl = document.getElementById("queueEmpty");
+    listEl.innerHTML = "";
+
+    if(!contacts.length){
+      emptyEl.classList.remove("hidden");
+      updateStats();
+      return;
+    }
+    emptyEl.classList.add("hidden");
+
+    var sent = getSent();
+    var suppressed = getSuppressed();
+
+    var toShow = contacts.filter(function(c){
+      if(filtroActual === "pendientes") return !sent[c.phone] && !suppressed[c.phone];
+      if(filtroActual === "bajas") return !!suppressed[c.phone];
+      return true; // todos
+    });
+
+    if(!toShow.length){
+      emptyEl.textContent = filtroActual === "bajas" ? "Nadie marcado como baja en esta lista." : "🎉 No queda nadie pendiente.";
+      emptyEl.classList.remove("hidden");
+      updateStats();
+      return;
+    }
+
+    toShow.forEach(function(c){
+      var item = document.createElement("div");
+      item.className = "queue-item";
+
+      var status = "";
+      if(suppressed[c.phone]) status = "<span class=\"badge badge-bad\">🚫 Baja</span>";
+      else if(sent[c.phone]) status = "<span class=\"badge badge-good\">✅ Enviado</span>";
+      else status = "<span class=\"badge badge-warn\">⏳ Pendiente</span>";
+
+      item.innerHTML =
+        '<div class="info">' +
+          '<div class="nm">' + (c.name || "Sin nombre") + '</div>' +
+          '<div class="ph">' + c.phone + ' · ' + status + '</div>' +
+        '</div>' +
+        '<div class="acts"></div>';
+
+      var acts = item.querySelector(".acts");
+
+      if(!suppressed[c.phone]){
+        var waBtn = document.createElement("button");
+        waBtn.className = "iconbtn wa";
+        waBtn.textContent = "📲";
+        waBtn.title = "Abrir WhatsApp";
+        waBtn.addEventListener("click", function(){ enviarA(c); });
+        acts.appendChild(waBtn);
+
+        var bajaBtn = document.createElement("button");
+        bajaBtn.className = "iconbtn baja";
+        bajaBtn.textContent = "🚫";
+        bajaBtn.title = "Marcar como baja";
+        bajaBtn.addEventListener("click", function(){
+          if(confirm("¿" + (c.name || c.phone) + " pidió no recibir más mensajes?")){
+            var s = getSuppressed();
+            s[c.phone] = {ts: Date.now()};
+            setSuppressed(s);
+            renderQueue();
+          }
+        });
+        acts.appendChild(bajaBtn);
+      }else{
+        var undoBtn = document.createElement("button");
+        undoBtn.className = "iconbtn";
+        undoBtn.textContent = "↩️";
+        undoBtn.title = "Quitar de bajas";
+        undoBtn.addEventListener("click", function(){
+          var s = getSuppressed();
+          delete s[c.phone];
+          setSuppressed(s);
+          renderQueue();
+        });
+        acts.appendChild(undoBtn);
+      }
+
+      listEl.appendChild(item);
+    });
+
+    updateStats();
+  }
+
+  function updateStats(){
+    var sent = getSent();
+    var suppressed = getSuppressed();
+    var total = contacts.length;
+    var sentCount = contacts.filter(function(c){ return sent[c.phone]; }).length;
+    var pending = contacts.filter(function(c){ return !sent[c.phone] && !suppressed[c.phone]; }).length;
+    document.getElementById("statEnviados").textContent = sentCount;
+    document.getElementById("statPendientes").textContent = pending;
+    var pct = total ? Math.round((sentCount/total)*100) : 0;
+    document.getElementById("progFill").style.width = pct + "%";
+    document.getElementById("progPct").textContent = pct + "%";
+  }
+
+  function checkLock(){
+    var now = Date.now();
+    if(now < lockUntil){
+      var mins = Math.ceil((lockUntil - now)/60000);
+      var banner = document.getElementById("lockBanner");
+      banner.textContent = "⏸️ Tanda completa. Pausa obligatoria: espera " + mins + " min antes de seguir enviando. Esto protege tu número.";
+      banner.classList.remove("hidden");
+      return true;
+    }
+    document.getElementById("lockBanner").classList.add("hidden");
+    return false;
+  }
+
+  function enviarA(c){
+    if(!document.getElementById("chkConsentimiento").checked){
+      alert("Antes de enviar, confirma en el Paso 2 que tienes consentimiento para contactar a estos clientes.");
+      return;
+    }
+    if(checkLock()) return;
+
+    var atajo = atajoInput.value.replace(/^\//,"").trim() || "";
+    var texto = encodeURIComponent("/" + atajo);
+    var lada = config.lada || "52";
+    var full = lada + c.phone;
+    var forceB = document.getElementById("forceWaB").checked;
+
+    var url;
+    if(forceB){
+      url = "intent://send?phone=" + full + "&text=" + texto + "#Intent;scheme=smsto;package=com.whatsapp.w4b;end";
+    }else{
+      url = "https://wa.me/" + full + "?text=" + texto;
+    }
+    window.open(url, "_blank");
+
+    var sent = getSent();
+    sent[c.phone] = {ts: Date.now()};
+    setSent(sent);
+
+    // rate limiter: cuenta envíos dentro de la tanda actual
+    var tanda = parseInt(document.getElementById("cfgTanda").value, 10) || 15;
+    var pausaMin = parseInt(document.getElementById("cfgPausa").value, 10) || 5;
+    var batch = getSentCountThisBatch();
+    batch.count = (batch.count || 0) + 1;
+    if(batch.count >= tanda){
+      lockUntil = Date.now() + pausaMin*60000;
+      batch.count = 0;
+      startLockCountdown();
+    }
+    saveJSON(nsKey("batchcount"), batch);
+
+    renderQueue();
+  }
+
+  function startLockCountdown(){
+    checkLock();
+    if(lockTimer) clearInterval(lockTimer);
+    lockTimer = setInterval(function(){
+      if(!checkLock()){
+        clearInterval(lockTimer);
+      }
+    }, 15000);
+  }
+
+  document.getElementById("btnReset").addEventListener("click", function(){
+    if(!confirm("Esto borra el historial de enviados (no las bajas) de esta lista en este teléfono. ¿Seguro?")) return;
+    setSent({});
+    saveJSON(nsKey("batchcount"), {count:0});
+    renderQueue();
+  });
+
+  // ---------- init ----------
+  initConfigScreen();
+})();
+</script>
+</body>
+</html>
