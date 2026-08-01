@@ -14,159 +14,231 @@
 <title>Promos por WhatsApp — Prime MX</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --navy:#0b2545;
     --navy-2:#123a6b;
+    --navy-deep:#081a33;
     --cyan:#00b6f1;
-    --cyan-dim:#00b6f122;
-    --paper:#f5f7fa;
+    --cyan-soft:#4dcdf7;
+    --cyan-dim:#00b6f11c;
+    --paper:#f3f6fa;
     --card:#ffffff;
-    --ink:#132033;
+    --ink:#0f1c30;
     --ink-dim:#5c6b7d;
-    --line:#e1e6ec;
+    --ink-faint:#8a97a8;
+    --line:#e4e9ef;
     --good:#1e9e5a;
     --good-bg:#e8f8ef;
     --warn:#b8790a;
     --warn-bg:#fdf1de;
     --bad:#c53434;
     --bad-bg:#fdeaea;
-    --radius:14px;
+    --radius:16px;
+    --radius-sm:10px;
+    --shadow-card:0 1px 2px rgba(15,28,48,.04), 0 8px 24px -12px rgba(15,28,48,.10);
+    --shadow-pop:0 4px 14px -4px rgba(0,182,241,.35);
+    --font-display:"Sora", "Inter", -apple-system, sans-serif;
+    --font-body:"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   *{box-sizing:border-box;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.01ms !important; transition-duration:.01ms !important;}
+  }
   body{
     margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-family:var(--font-body);
     background:var(--paper);
     color:var(--ink);
-    padding-bottom:48px;
+    padding-bottom:56px;
+    -webkit-font-smoothing:antialiased;
   }
+
+  /* ---------- header con patrón de señal ---------- */
   header.top{
-    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+    position:relative;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 88% -10%, rgba(0,182,241,.35) 0%, rgba(0,182,241,0) 42%),
+      linear-gradient(150deg, var(--navy-deep) 0%, var(--navy) 55%, var(--navy-2) 100%);
     color:#fff;
-    padding:22px 18px 26px;
-    border-radius:0 0 22px 22px;
+    padding:24px 20px 30px;
+    border-radius:0 0 26px 26px;
+    box-shadow:0 12px 28px -16px rgba(8,26,51,.55);
   }
-  .brandrow{display:flex;align-items:center;gap:10px;font-size:13px;opacity:.85;margin-bottom:10px;}
-  .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);}
-  header.top h1{margin:0 0 4px;font-size:22px;letter-spacing:-.02em;}
-  header.top p{margin:0;font-size:14px;opacity:.85;line-height:1.4;}
+  header.top::before{
+    content:"";
+    position:absolute;
+    top:-40px; right:-40px;
+    width:220px; height:220px;
+    border-radius:50%;
+    border:1.5px solid rgba(255,255,255,.14);
+    pointer-events:none;
+  }
+  header.top::after{
+    content:"";
+    position:absolute;
+    top:-90px; right:-90px;
+    width:320px; height:320px;
+    border-radius:50%;
+    border:1.5px solid rgba(255,255,255,.08);
+    pointer-events:none;
+  }
+  .brandrow{position:relative;display:flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:.03em;opacity:.8;margin-bottom:12px;font-weight:600;text-transform:uppercase;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 4px rgba(0,182,241,.18);}
+  header.top h1{position:relative;margin:0 0 6px;font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-.02em;}
+  header.top p{position:relative;margin:0;font-size:14px;opacity:.82;line-height:1.5;max-width:34ch;}
   .storepill{
-    display:inline-flex;align-items:center;gap:6px;
-    margin-top:12px;background:rgba(255,255,255,.12);
-    padding:6px 12px;border-radius:999px;font-size:12.5px;
+    position:relative;
+    display:inline-flex;align-items:center;gap:7px;
+    margin-top:14px;background:rgba(255,255,255,.13);
+    backdrop-filter:blur(2px);
+    border:1px solid rgba(255,255,255,.14);
+    padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:600;
+    cursor:pointer;transition:background .15s;
   }
-  main{max-width:640px;margin:0 auto;padding:16px;}
+  .storepill:hover{background:rgba(255,255,255,.2);}
+
+  main{max-width:640px;margin:0 auto;padding:18px 16px;}
+
   .card{
     background:var(--card);
     border:1px solid var(--line);
     border-radius:var(--radius);
-    padding:18px;
-    margin-bottom:14px;
+    padding:20px;
+    margin-bottom:16px;
+    box-shadow:var(--shadow-card);
   }
   .step-eyebrow{
-    display:flex;align-items:center;gap:8px;
-    font-size:11.5px;font-weight:700;color:var(--cyan);
-    text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;
+    display:flex;align-items:center;gap:9px;
+    font-size:11px;font-weight:700;color:var(--navy-2);
+    text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;
   }
   .step-eyebrow .n{
-    width:20px;height:20px;border-radius:6px;background:var(--cyan-dim);
-    color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:12px;
+    width:22px;height:22px;border-radius:7px;
+    background:linear-gradient(135deg, var(--cyan) 0%, var(--cyan-soft) 100%);
+    color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;
+    box-shadow:var(--shadow-pop);
   }
-  h2{font-size:17px;margin:0 0 10px;}
-  label{display:block;font-size:13px;color:var(--ink-dim);margin:12px 0 5px;font-weight:600;}
+  h2{font-family:var(--font-display);font-size:18px;font-weight:700;letter-spacing:-.01em;margin:0 0 12px;color:var(--ink);}
+  label{display:block;font-size:12.5px;color:var(--ink-dim);margin:14px 0 6px;font-weight:600;}
   label:first-of-type{margin-top:0;}
   input[type=text],input[type=number],select{
-    width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;
-    font-size:15px;background:#fff;color:var(--ink);
+    width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+    font-size:15px;background:#fbfcfe;color:var(--ink);font-family:var(--font-body);
+    transition:border-color .15s, background .15s;
   }
-  input:focus,select:focus{outline:none;border-color:var(--cyan);}
+  input:focus,select:focus{outline:none;border-color:var(--cyan);background:#fff;box-shadow:0 0 0 3px var(--cyan-dim);}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .filebox{
-    border:2px dashed var(--line);border-radius:12px;padding:22px 14px;
-    text-align:center;cursor:pointer;transition:.15s;background:#fafcfe;
+    border:1.5px dashed #c7d2de;border-radius:var(--radius-sm);padding:26px 14px;
+    text-align:center;cursor:pointer;transition:.15s;background:linear-gradient(180deg,#fafcfe, #f5f8fb);
   }
-  .filebox:hover{border-color:var(--cyan);}
-  .filebox .ic{font-size:26px;}
-  .filebox .main{font-weight:600;font-size:14.5px;margin-top:4px;}
-  .filebox .sub{font-size:12px;color:var(--ink-dim);margin-top:2px;}
+  .filebox:hover{border-color:var(--cyan);background:var(--cyan-dim);}
+  .filebox .ic{font-size:28px;}
+  .filebox .main{font-weight:700;font-size:14.5px;margin-top:6px;color:var(--ink);}
+  .filebox .sub{font-size:12px;color:var(--ink-faint);margin-top:2px;}
   .btn{
     display:flex;align-items:center;justify-content:center;gap:8px;
-    width:100%;padding:13px;border:none;border-radius:11px;
-    font-size:15px;font-weight:700;cursor:pointer;transition:.15s;
+    width:100%;padding:13px;border:none;border-radius:var(--radius-sm);
+    font-size:14.5px;font-weight:700;cursor:pointer;transition:transform .1s, box-shadow .15s, opacity .15s;
+    font-family:var(--font-body);
   }
-  .btn-primary{background:var(--navy);color:#fff;}
-  .btn-primary:disabled{background:#b9c2cd;cursor:not-allowed;}
-  .btn-cyan{background:var(--cyan);color:var(--navy);}
-  .btn-cyan:disabled{background:#cfeaf5;color:#7fa8b8;cursor:not-allowed;}
-  .btn-ghost{background:transparent;color:var(--navy);border:1.5px solid var(--line);}
-  .btn-danger-ghost{background:transparent;color:var(--bad);border:1.5px solid #f0c9c9;}
-  .btn-sm{padding:8px 10px;font-size:13px;width:auto;}
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:linear-gradient(135deg, var(--navy-2), var(--navy));color:#fff;box-shadow:0 6px 16px -6px rgba(11,37,69,.5);}
+  .btn-primary:disabled{background:#b9c2cd;box-shadow:none;cursor:not-allowed;}
+  .btn-cyan{background:linear-gradient(135deg, var(--cyan-soft), var(--cyan));color:#04283a;box-shadow:var(--shadow-pop);}
+  .btn-cyan:disabled{background:#cfeaf5;color:#7fa8b8;box-shadow:none;cursor:not-allowed;}
+  .btn-ghost{background:#fff;color:var(--navy);border:1.5px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--cyan);}
+  .btn-danger-ghost{background:#fff;color:var(--bad);border:1.5px solid #f0c9c9;}
+  .btn-danger-ghost:hover{background:var(--bad-bg);}
+  .btn-sm{padding:9px 10px;font-size:12.5px;width:auto;}
   .checkrow{
     display:flex;gap:10px;align-items:flex-start;background:var(--paper);
-    border-radius:10px;padding:12px;margin-top:12px;font-size:13.5px;line-height:1.45;
+    border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px;margin-top:12px;font-size:13.5px;line-height:1.45;
   }
-  .checkrow input{width:auto;margin-top:2px;}
+  .checkrow input{width:auto;margin-top:2px;accent-color:var(--cyan);}
   .toggle-row{
-    display:flex;justify-content:space-between;align-items:center;
-    background:var(--paper);border-radius:10px;padding:11px 13px;margin-top:10px;font-size:13.5px;
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px;margin-top:10px;font-size:13.5px;font-weight:500;
   }
   .switch{position:relative;width:42px;height:24px;flex:none;}
   .switch input{opacity:0;width:0;height:0;}
-  .slider{position:absolute;inset:0;background:#c9d1da;border-radius:999px;cursor:pointer;transition:.15s;}
-  .slider:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s;}
-  input:checked + .slider{background:var(--cyan);}
+  .slider{position:absolute;inset:0;background:#ccd4dc;border-radius:999px;cursor:pointer;transition:.15s;}
+  .slider:before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+  input:checked + .slider{background:linear-gradient(135deg,var(--cyan-soft),var(--cyan));}
   input:checked + .slider:before{transform:translateX(18px);}
   .helper{
-    background:var(--paper);border-radius:10px;padding:12px 14px;margin-top:10px;font-size:13px;color:var(--ink-dim);line-height:1.5;
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 14px;margin-top:10px;font-size:12.5px;color:var(--ink-dim);line-height:1.55;
   }
   .helper b{color:var(--ink);}
   details{margin-top:10px;}
-  summary{cursor:pointer;font-size:13.5px;font-weight:700;color:var(--navy);padding:4px 0;}
-  ol{margin:8px 0 0;padding-left:20px;font-size:13.5px;line-height:1.6;color:var(--ink-dim);}
-  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;}
+  summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--navy-2);padding:6px 0;}
+  ol{margin:8px 0 0;padding-left:20px;font-size:13.5px;line-height:1.65;color:var(--ink-dim);}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.01em;}
   .badge-good{background:var(--good-bg);color:var(--good);}
   .badge-warn{background:var(--warn-bg);color:var(--warn);}
   .badge-bad{background:var(--bad-bg);color:var(--bad);}
   .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;}
-  .stat{background:var(--paper);border-radius:10px;padding:12px;text-align:center;}
-  .stat .num{font-size:22px;font-weight:800;color:var(--navy);}
-  .stat .lbl{font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.03em;}
-  .progressbar{height:8px;background:var(--paper);border-radius:999px;overflow:hidden;margin:6px 0 4px;}
-  .progressbar .fill{height:100%;background:var(--cyan);border-radius:999px;transition:width .2s;}
+  .stat{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 12px;text-align:center;position:relative;overflow:hidden;}
+  .stat::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--cyan-soft));}
+  .stat .num{font-family:var(--font-display);font-size:24px;font-weight:800;color:var(--navy);line-height:1.1;}
+  .stat .lbl{font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.04em;margin-top:3px;font-weight:600;}
+  .progressbar{height:9px;background:var(--paper);border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:8px 0 4px;}
+  .progressbar .fill{height:100%;background:linear-gradient(90deg,var(--navy-2),var(--cyan));border-radius:999px;transition:width .3s ease;}
   .queue-item{
-    display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:11px;padding:12px 2px;border-bottom:1px solid var(--line);
+    animation:fadeIn .25s ease both;
   }
+  @keyframes fadeIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
   .queue-item:last-child{border-bottom:none;}
+  .avatar{
+    flex:none;width:36px;height:36px;border-radius:10px;
+    background:linear-gradient(135deg, var(--navy-2), var(--navy));
+    color:#fff;font-family:var(--font-display);font-weight:700;font-size:14px;
+    display:flex;align-items:center;justify-content:center;
+  }
   .queue-item .info{flex:1;min-width:0;}
-  .queue-item .nm{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .queue-item .ph{font-size:12.5px;color:var(--ink-dim);}
+  .queue-item .nm{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);}
+  .queue-item .ph{font-size:12px;color:var(--ink-faint);margin-top:1px;}
   .queue-item .acts{display:flex;gap:6px;flex:none;}
   .iconbtn{
-    width:34px;height:34px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
-    display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;
+    width:36px;height:36px;border-radius:var(--radius-sm);border:1.5px solid var(--line);background:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;transition:transform .1s;
   }
-  .iconbtn.wa{background:#1ea94c;border-color:#1ea94c;color:#fff;}
+  .iconbtn:active{transform:scale(.92);}
+  .iconbtn.wa{background:linear-gradient(135deg,#25d366,#1ea94c);border-color:#1ea94c;color:#fff;box-shadow:0 4px 12px -4px rgba(30,169,76,.5);}
   .iconbtn.baja{color:var(--bad);}
-  .pill-toggle{display:flex;gap:6px;margin-bottom:10px;}
+  .pill-toggle{display:flex;gap:6px;margin-bottom:12px;background:var(--paper);border:1px solid var(--line);padding:4px;border-radius:var(--radius-sm);}
   .pill-toggle button{
-    flex:1;padding:8px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
-    font-size:12.5px;font-weight:600;color:var(--ink-dim);cursor:pointer;
+    flex:1;padding:8px;border-radius:8px;border:none;background:transparent;
+    font-size:12.5px;font-weight:700;color:var(--ink-dim);cursor:pointer;transition:.15s;
   }
-  .pill-toggle button.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .pill-toggle button.active{background:var(--navy);color:#fff;box-shadow:0 3px 8px -3px rgba(11,37,69,.45);}
   .lock-banner{
-    background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:12px 14px;
-    font-size:13.5px;font-weight:600;text-align:center;margin-bottom:10px;
+    background:var(--warn-bg);color:var(--warn);border-radius:var(--radius-sm);padding:13px 14px;
+    font-size:13px;font-weight:600;text-align:center;margin-bottom:10px;border:1px solid #f2ddb3;
   }
-  .empty{text-align:center;padding:30px 10px;color:var(--ink-dim);font-size:13.5px;}
+  .empty{text-align:center;padding:36px 10px;color:var(--ink-faint);font-size:13.5px;}
   textarea{
-    width:100%;min-height:80px;padding:11px 12px;border:1.5px solid var(--line);
-    border-radius:10px;font-size:14.5px;font-family:inherit;resize:vertical;color:var(--ink);
+    width:100%;min-height:80px;padding:12px 13px;border:1.5px solid var(--line);
+    border-radius:var(--radius-sm);font-size:14.5px;font-family:var(--font-body);resize:vertical;color:var(--ink);
+    transition:border-color .15s;
   }
-  footer{max-width:640px;margin:20px auto 0;padding:0 16px;font-size:11.5px;color:var(--ink-dim);line-height:1.6;text-align:center;}
+  textarea:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-dim);}
+  footer{max-width:640px;margin:24px auto 0;padding:0 18px;font-size:11.5px;color:var(--ink-faint);line-height:1.65;text-align:center;}
   .tag-inline{background:var(--cyan-dim);color:var(--navy);border-radius:6px;padding:1px 6px;font-size:11.5px;font-weight:700;}
   .hidden{display:none !important;}
   #fileInput{display:none;}
+
+  /* accesibilidad: foco visible en navegación por teclado */
+  button:focus-visible, .filebox:focus-visible, .storepill:focus-visible{
+    outline:2px solid var(--cyan); outline-offset:2px;
+  }
 </style>
 </head>
 <body>
@@ -176,6 +248,7 @@
   <h1>📲 Promos por WhatsApp</h1>
   <p>Manda tus promociones a tu cartera, en tandas seguras y sin perder el hilo.</p>
   <div class="storepill" id="storePill">⚙️ Configura tu tienda para empezar</div>
+  <div style="color:rgba(255,255,255,.65);font-size:11px;margin-top:5px;">Toca para cambiar tienda o ejecutivo</div>
 </header>
 
 <main>
@@ -202,6 +275,16 @@
 
     <label>Nombre para identificarte en el mensaje</label>
     <input type="text" id="cfgRemitente" placeholder="Ej. Sebastián de AT&T León Centro">
+
+    <label>ATTUID</label>
+    <input type="text" id="cfgAttuid" placeholder="Ej. SGALV1234">
+
+    <details style="margin-top:14px;">
+      <summary>⚙️ Reporte centralizado para tu gerente (opcional)</summary>
+      <div class="helper" style="margin-top:8px;">Si tu gerente te pasó una URL de reporte, pégala aquí — así él puede ver cuántos mensajes mandas por ATTUID, sin que se suba ningún número de cliente ni nombre. Si no tienes una, déjalo vacío y la app funciona igual.</div>
+      <label>URL de reporte (opcional)</label>
+      <input type="text" id="cfgSheetUrl" placeholder="https://script.google.com/...">
+    </details>
 
     <button class="btn btn-primary" id="btnGuardarConfig" style="margin-top:16px;">Guardar y continuar</button>
   </section>
@@ -237,7 +320,7 @@
       </div>
       <label>No recontactar si ya se le mandó algo en los últimos (días)</label>
       <input type="number" id="cfgEnfriamiento" value="21" min="0" max="365">
-      <button class="btn btn-cyan" id="btnProcesar" style="margin-top:12px;">Procesar lista</button>
+      <button class="btn btn-cyan" id="btnProcesar" style="margin-top:12px;">Limpiar y preparar lista para enviar</button>
     </div>
 
     <div id="fileError" class="lock-banner hidden" style="background:var(--bad-bg);color:var(--bad);"></div>
@@ -280,7 +363,7 @@
 
     <label style="margin-top:16px;">Generador de plantilla (opcional, para copiar a tu respuesta rápida)</label>
     <textarea id="plantillaBase" placeholder="Ej. Hola {nombre}, tenemos promos especiales en renovación este mes con equipos desde $..."></textarea>
-    <button class="btn btn-ghost btn-sm" id="btnGenerarPlantilla" style="margin-top:8px;">Generar con identificación + baja</button>
+    <button class="btn btn-ghost btn-sm" id="btnGenerarPlantilla" style="margin-top:8px;">Agregar tu firma y la línea de "responde BAJA"</button>
     <textarea id="plantillaFinal" readonly style="margin-top:8px;display:none;background:var(--paper);"></textarea>
     <button class="btn btn-ghost btn-sm hidden" id="btnCopiarPlantilla" style="margin-top:8px;">📋 Copiar plantilla</button>
 
@@ -310,45 +393,54 @@
     <div class="progressbar"><div class="fill" id="progFill" style="width:0%"></div></div>
     <div style="font-size:12px;color:var(--ink-dim);text-align:right;" id="progPct">0%</div>
 
-    <div class="row2" style="margin-top:12px;">
-      <div>
-        <label>Tamaño de tanda</label>
-        <input type="number" id="cfgTanda" value="15" min="5" max="40">
-      </div>
-      <div>
-        <label>Pausa entre tandas (min)</label>
-        <input type="number" id="cfgPausa" value="5" min="2" max="30">
-      </div>
-    </div>
+    <div class="lock-banner hidden" id="lockBanner"></div>
 
-    <div class="row2">
-      <div>
-        <label>Tope duro de mensajes</label>
-        <input type="number" id="cfgHardLimit" value="30" min="5" max="200">
-      </div>
-      <div>
-        <label>Cada cuántas horas</label>
-        <input type="number" id="cfgHardWindow" value="4" min="1" max="24">
-      </div>
-    </div>
-    <div class="helper" style="margin-top:8px;">Este tope es aparte de las pausas por tanda: aunque respetes las pausas cortas, la app no te deja pasar de <b><span id="hardLimitPreview">30</span></b> mensajes cada <b><span id="hardWindowPreview">4</span></b> horas.</div>
+    <details id="ritmoDetails">
+      <summary>⚙️ Ritmo de envío (tandas, tope y horario)</summary>
+      <div style="margin-top:10px;">
+        <div class="row2">
+          <div>
+            <label>Tamaño de tanda</label>
+            <input type="number" id="cfgTanda" value="15" min="5" max="40">
+          </div>
+          <div>
+            <label>Pausa entre tandas (min)</label>
+            <input type="number" id="cfgPausa" value="5" min="2" max="30">
+          </div>
+        </div>
 
-    <div class="toggle-row">
-      <span>🕘 Restringir horario de envío</span>
-      <label class="switch"><input type="checkbox" id="chkHorario" checked><span class="slider"></span></label>
-    </div>
-    <div class="row2" id="horarioInputs">
-      <div>
-        <label>Desde (hora)</label>
-        <input type="number" id="cfgHoraDesde" value="9" min="0" max="23">
-      </div>
-      <div>
-        <label>Hasta (hora)</label>
-        <input type="number" id="cfgHoraHasta" value="20" min="0" max="23">
-      </div>
-    </div>
+        <label>Segundos entre cada mensaje individual</label>
+        <input type="number" id="cfgIntervalo" value="15" min="0" max="120" readonly disabled style="background:#eef1f5;color:var(--ink-dim);cursor:not-allowed;">
+        <div class="helper" style="margin-top:8px;">🔒 Fijado en 15 segundos por tu gerente — no se puede cambiar desde aquí. Después de cada envío, el botón de WhatsApp del siguiente contacto se bloquea este tiempo.</div>
 
-    <div id="lockBanner" class="lock-banner hidden"></div>
+        <div class="row2">
+          <div>
+            <label>Tope duro de mensajes</label>
+            <input type="number" id="cfgHardLimit" value="30" min="5" max="200">
+          </div>
+          <div>
+            <label>Cada cuántas horas</label>
+            <input type="number" id="cfgHardWindow" value="4" min="1" max="24">
+          </div>
+        </div>
+        <div class="helper" style="margin-top:8px;">Este tope es aparte de las pausas por tanda: aunque respetes las pausas cortas, la app no te deja pasar de <b><span id="hardLimitPreview">30</span></b> mensajes cada <b><span id="hardWindowPreview">4</span></b> horas.</div>
+
+        <div class="toggle-row">
+          <span>🕘 Restringir horario de envío</span>
+          <label class="switch"><input type="checkbox" id="chkHorario" checked><span class="slider"></span></label>
+        </div>
+        <div class="row2" id="horarioInputs">
+          <div>
+            <label>Desde (hora)</label>
+            <input type="number" id="cfgHoraDesde" value="9" min="0" max="23">
+          </div>
+          <div>
+            <label>Hasta (hora)</label>
+            <input type="number" id="cfgHoraHasta" value="20" min="0" max="23">
+          </div>
+        </div>
+      </div>
+    </details>
 
     <div class="pill-toggle" style="margin-top:14px;">
       <button id="filtroPendientes" class="active">⏳ Pendientes</button>
@@ -359,13 +451,18 @@
     <div id="queueList"></div>
     <div id="queueEmpty" class="empty hidden">Sube tu archivo en el Paso 1 para ver tu lista aquí.</div>
 
-    <button class="btn btn-ghost btn-sm" id="btnReporte" style="margin-top:14px;">📊 Generar reporte (PDF)</button>
-    <div class="row2" style="margin-top:8px;">
-      <button class="btn btn-ghost btn-sm" id="btnExportar">⬇️ Exportar respaldo</button>
-      <button class="btn btn-ghost btn-sm" id="btnImportar">⬆️ Importar respaldo</button>
-    </div>
-    <input type="file" id="importFile" accept="application/json" style="display:none;">
-    <button class="btn btn-danger-ghost btn-sm" id="btnReset" style="margin-top:8px;">🔄 Reiniciar historial de esta lista</button>
+    <details style="margin-top:14px;">
+      <summary>🛠️ Reporte, respaldo y reinicio</summary>
+      <div style="margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" id="btnReporte">📊 Generar reporte (PDF)</button>
+        <div class="row2" style="margin-top:8px;">
+          <button class="btn btn-ghost btn-sm" id="btnExportar">⬇️ Guardar copia de tu historial</button>
+          <button class="btn btn-ghost btn-sm" id="btnImportar">⬆️ Cargar una copia guardada</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json" style="display:none;">
+        <button class="btn btn-danger-ghost btn-sm" id="btnReset" style="margin-top:8px;">🔄 Reiniciar historial de esta lista</button>
+      </div>
+    </details>
   </section>
 
   <!-- CONSEJOS -->
@@ -401,6 +498,8 @@
   var filtroActual = "pendientes";
   var lockUntil = 0;
   var lockTimer = null;
+  var nextSendTs = 0;
+  var intervalTimer = null;
 
   // ---------- helpers de storage con namespace por tienda ----------
   function nsKey(base){
@@ -443,6 +542,8 @@
       document.getElementById("cfgEjecutivo").value = config.ejecutivo || "";
       document.getElementById("cfgLada").value = config.lada || "52";
       document.getElementById("cfgRemitente").value = config.remitente || "";
+      document.getElementById("cfgAttuid").value = config.attuid || "";
+      document.getElementById("cfgSheetUrl").value = config.sheetUrl || "";
       showApp();
     }
   }
@@ -451,11 +552,13 @@
     var ejecutivo = document.getElementById("cfgEjecutivo").value.trim();
     var lada = document.getElementById("cfgLada").value.trim() || "52";
     var remitente = document.getElementById("cfgRemitente").value.trim();
+    var attuid = document.getElementById("cfgAttuid").value.trim();
+    var sheetUrl = document.getElementById("cfgSheetUrl").value.trim();
     if(!tienda || !ejecutivo){
       alert("Escribe al menos la tienda y tu nombre para continuar.");
       return;
     }
-    config = {tienda:tienda, ejecutivo:ejecutivo, lada:lada, remitente: remitente || ejecutivo};
+    config = {tienda:tienda, ejecutivo:ejecutivo, lada:lada, remitente: remitente || ejecutivo, attuid: attuid, sheetUrl: sheetUrl};
     saveJSON(STORAGE_PREFIX + "config", config);
     showApp();
   });
@@ -665,6 +768,15 @@
     });
   });
 
+  function getInitials(name, phone){
+    if(name){
+      var parts = name.trim().split(/\s+/);
+      var initials = parts[0].charAt(0) + (parts[1] ? parts[1].charAt(0) : "");
+      return initials.toUpperCase();
+    }
+    return phone ? phone.slice(-2) : "?";
+  }
+
   function renderQueue(){
     var listEl = document.getElementById("queueList");
     var emptyEl = document.getElementById("queueEmpty");
@@ -703,6 +815,7 @@
       else status = "<span class=\"badge badge-warn\">⏳ Pendiente</span>";
 
       item.innerHTML =
+        '<div class="avatar">' + getInitials(c.name, c.phone) + '</div>' +
         '<div class="info">' +
           '<div class="nm">' + (c.name || "Sin nombre") + '</div>' +
           '<div class="ph">' + c.phone + ' · ' + status + '</div>' +
@@ -714,17 +827,15 @@
       if(!suppressed[c.phone]){
         var waBtn = document.createElement("button");
         waBtn.className = "iconbtn wa";
-        waBtn.textContent = "📲";
-        waBtn.title = "Abrir WhatsApp";
+        waBtn.innerHTML = "📲 Enviar";
+        waBtn.title = "Abre WhatsApp con el chat de este cliente";
         waBtn.addEventListener("click", function(){ enviarA(c); });
         acts.appendChild(waBtn);
 
         var bajaBtn = document.createElement("button");
         bajaBtn.className = "iconbtn baja";
-        bajaBtn.textContent = "Baja";
-        bajaBtn.style.fontSize = "11px";
-        bajaBtn.style.fontWeight = "700";
-        bajaBtn.title = "Marcar como baja";
+        bajaBtn.innerHTML = "Baja";
+        bajaBtn.title = "Marca a este cliente para que no se le vuelva a escribir";
         bajaBtn.addEventListener("click", function(){
           if(confirm("¿" + (c.name || c.phone) + " pidió no recibir más mensajes?")){
             var s = getSuppressed();
@@ -737,8 +848,8 @@
       }else{
         var undoBtn = document.createElement("button");
         undoBtn.className = "iconbtn";
-        undoBtn.textContent = "↩️";
-        undoBtn.title = "Quitar de bajas";
+        undoBtn.innerHTML = "↩️ Quitar de bajas";
+        undoBtn.title = "Este cliente vuelve a poder recibir mensajes";
         undoBtn.addEventListener("click", function(){
           var s = getSuppressed();
           delete s[c.phone];
@@ -847,8 +958,32 @@
       return true;
     }
 
+    if(now < nextSendTs){
+      var segRestantes = Math.ceil((nextSendTs - now)/1000);
+      banner.textContent = "⏱️ Espera " + segRestantes + "s para el siguiente mensaje.";
+      banner.classList.remove("hidden");
+      return true;
+    }
+
     banner.classList.add("hidden");
     return false;
+  }
+
+  function sendToSheet(){
+    if(!config.sheetUrl) return;
+    try{
+      fetch(config.sheetUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {"Content-Type": "text/plain"},
+        body: JSON.stringify({
+          tienda: config.tienda,
+          ejecutivo: config.ejecutivo,
+          attuid: config.attuid || "",
+          ts: new Date().toISOString()
+        })
+      });
+    }catch(e){ /* nunca debe romper el envío por esto */ }
   }
 
   function enviarA(c){
@@ -868,6 +1003,13 @@
     var sent = getSent();
     sent[c.phone] = {ts: Date.now()};
     setSent(sent);
+    sendToSheet();
+
+    var intervaloSeg = 15; // fijo — no editable por el ejecutivo
+    if(!isNaN(intervaloSeg) && intervaloSeg > 0){
+      nextSendTs = Date.now() + intervaloSeg*1000;
+      startIntervalCountdown();
+    }
 
     // rate limiter: cuenta envíos dentro de la tanda actual
     var tanda = parseInt(document.getElementById("cfgTanda").value, 10) || 15;
@@ -883,6 +1025,19 @@
     saveJSON(nsKey("batchcount"), batch);
 
     renderQueue();
+  }
+
+  function startIntervalCountdown(){
+    checkLock();
+    if(intervalTimer) clearInterval(intervalTimer);
+    intervalTimer = setInterval(function(){
+      if(Date.now() >= nextSendTs){
+        clearInterval(intervalTimer);
+        checkLock();
+      }else{
+        checkLock();
+      }
+    }, 1000);
   }
 
   function startLockCountdown(){
