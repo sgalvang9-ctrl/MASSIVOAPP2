@@ -395,52 +395,11 @@
 
     <div class="lock-banner hidden" id="lockBanner"></div>
 
-    <details id="ritmoDetails">
-      <summary>⚙️ Ritmo de envío (tandas, tope y horario)</summary>
-      <div style="margin-top:10px;">
-        <div class="row2">
-          <div>
-            <label>Tamaño de tanda</label>
-            <input type="number" id="cfgTanda" value="15" min="5" max="40">
-          </div>
-          <div>
-            <label>Pausa entre tandas (min)</label>
-            <input type="number" id="cfgPausa" value="5" min="2" max="30">
-          </div>
-        </div>
-
-        <label>Segundos entre cada mensaje individual</label>
-        <input type="number" id="cfgIntervalo" value="15" min="0" max="120" readonly disabled style="background:#eef1f5;color:var(--ink-dim);cursor:not-allowed;">
-        <div class="helper" style="margin-top:8px;">🔒 Fijado en 15 segundos por tu gerente — no se puede cambiar desde aquí. Después de cada envío, el botón de WhatsApp del siguiente contacto se bloquea este tiempo.</div>
-
-        <div class="row2">
-          <div>
-            <label>Tope duro de mensajes</label>
-            <input type="number" id="cfgHardLimit" value="30" min="5" max="200">
-          </div>
-          <div>
-            <label>Cada cuántas horas</label>
-            <input type="number" id="cfgHardWindow" value="4" min="1" max="24">
-          </div>
-        </div>
-        <div class="helper" style="margin-top:8px;">Este tope es aparte de las pausas por tanda: aunque respetes las pausas cortas, la app no te deja pasar de <b><span id="hardLimitPreview">30</span></b> mensajes cada <b><span id="hardWindowPreview">4</span></b> horas.</div>
-
-        <div class="toggle-row">
-          <span>🕘 Restringir horario de envío</span>
-          <label class="switch"><input type="checkbox" id="chkHorario" checked><span class="slider"></span></label>
-        </div>
-        <div class="row2" id="horarioInputs">
-          <div>
-            <label>Desde (hora)</label>
-            <input type="number" id="cfgHoraDesde" value="9" min="0" max="23">
-          </div>
-          <div>
-            <label>Hasta (hora)</label>
-            <input type="number" id="cfgHoraHasta" value="20" min="0" max="23">
-          </div>
-        </div>
-      </div>
-    </details>
+    <div style="margin-top:10px;">
+      <label>Segundos entre cada mensaje individual</label>
+      <input type="number" id="cfgIntervalo" value="15" min="0" max="120" readonly disabled style="background:#eef1f5;color:var(--ink-dim);cursor:not-allowed;">
+      <div class="helper" style="margin-top:8px;">🔒 Fijado en 15 segundos por tu gerente — no se puede cambiar desde aquí. Después de cada envío, el botón de WhatsApp del siguiente contacto se bloquea este tiempo.</div>
+    </div>
 
     <div class="pill-toggle" style="margin-top:14px;">
       <button id="filtroPendientes" class="active">⏳ Pendientes</button>
@@ -496,8 +455,6 @@
   var contacts = []; // {name, phone, raw}
   var cleanStats = {validos:0, duplicados:0, invalidos:0, enBaja:0, enEnfriamiento:0, procesadoEn:null};
   var filtroActual = "pendientes";
-  var lockUntil = 0;
-  var lockTimer = null;
   var nextSendTs = 0;
   var intervalTimer = null;
 
@@ -757,7 +714,6 @@
   function setSent(v){ saveJSON(nsKey("sent"), v); }
   function getSuppressed(){ return loadJSON(nsKey("suppressed"), {}); }
   function setSuppressed(v){ saveJSON(nsKey("suppressed"), v); }
-  function getSentCountThisBatch(){ return loadJSON(nsKey("batchcount"), {count:0, since:0}); }
 
   ["filtroPendientes","filtroTodos","filtroBajas"].forEach(function(id){
     document.getElementById(id).addEventListener("click", function(){
@@ -879,37 +835,6 @@
     document.getElementById("progPct").textContent = pct + "%";
   }
 
-  function getHardLimitUnlockTime(){
-    var limit = parseInt(document.getElementById("cfgHardLimit").value, 10) || 30;
-    var windowHrs = parseFloat(document.getElementById("cfgHardWindow").value) || 4;
-    var windowMs = windowHrs * 3600000;
-    var now = Date.now();
-    var sent = getSent();
-    var recentTs = Object.keys(sent)
-      .map(function(k){ return sent[k].ts; })
-      .filter(function(ts){ return ts && (now - ts) < windowMs; })
-      .sort(function(a,b){ return a-b; });
-    if(recentTs.length < limit) return 0;
-    // se libera un lugar cuando el envío más viejo de la ventana "sale" de la ventana
-    var oldestRelevant = recentTs[recentTs.length - limit];
-    return oldestRelevant + windowMs;
-  }
-
-  function checkSchedule(){
-    var enabled = document.getElementById("chkHorario").checked;
-    if(!enabled) return false;
-    var desde = parseInt(document.getElementById("cfgHoraDesde").value, 10);
-    var hasta = parseInt(document.getElementById("cfgHoraHasta").value, 10);
-    var hr = new Date().getHours();
-    if(isNaN(desde) || isNaN(hasta)) return false;
-    if(desde <= hasta){
-      return hr < desde || hr >= hasta;
-    }else{
-      // rango que cruza medianoche, ej. 22 a 6
-      return hr < desde && hr >= hasta;
-    }
-  }
-
   function getEmergency(){ return loadJSON(nsKey("emergency"), null); }
   function setEmergency(v){ saveJSON(nsKey("emergency"), v); }
 
@@ -926,36 +851,6 @@
     }else{
       document.getElementById("emergencyActive").classList.add("hidden");
       document.getElementById("btnEmergencia").classList.remove("hidden");
-    }
-
-    if(checkSchedule()){
-      var desde = document.getElementById("cfgHoraDesde").value;
-      var hasta = document.getElementById("cfgHoraHasta").value;
-      banner.textContent = "🌙 Fuera de horario permitido de envío (" + desde + ":00 a " + hasta + ":00). Vuelve dentro de ese rango.";
-      banner.classList.remove("hidden");
-      return true;
-    }
-
-    var hardUnlock = getHardLimitUnlockTime();
-    var tandaLock = now < lockUntil;
-    var hardLock = now < hardUnlock;
-
-    if(hardLock){
-      var mins2 = Math.ceil((hardUnlock - now)/60000);
-      var hrs = Math.floor(mins2/60), rem = mins2%60;
-      var limit = parseInt(document.getElementById("cfgHardLimit").value, 10) || 30;
-      var windowHrs = document.getElementById("cfgHardWindow").value || 4;
-      banner.textContent = "🛑 Llegaste al tope de " + limit + " mensajes cada " + windowHrs + " h. Espera " +
-        (hrs > 0 ? hrs + "h " + rem + "min" : rem + " min") + " para seguir. Este tope no se puede saltar.";
-      banner.classList.remove("hidden");
-      return true;
-    }
-
-    if(tandaLock){
-      var mins = Math.ceil((lockUntil - now)/60000);
-      banner.textContent = "⏸️ Tanda completa. Pausa obligatoria: espera " + mins + " min antes de seguir enviando. Esto protege tu número.";
-      banner.classList.remove("hidden");
-      return true;
     }
 
     if(now < nextSendTs){
@@ -1011,19 +906,7 @@
       startIntervalCountdown();
     }
 
-    // rate limiter: cuenta envíos dentro de la tanda actual
-    var tanda = parseInt(document.getElementById("cfgTanda").value, 10) || 15;
-    var pausaMin = parseInt(document.getElementById("cfgPausa").value, 10) || 5;
-    var batch = getSentCountThisBatch();
-    batch.count = (batch.count || 0) + 1;
-    if(batch.count >= tanda){
-      lockUntil = Date.now() + pausaMin*60000;
-      batch.count = 0;
-      startLockCountdown();
-      generarReportePDF("Tanda completa (" + tanda + " mensajes)");
-    }
-    saveJSON(nsKey("batchcount"), batch);
-
+    // rate limiter: solo el intervalo de 15s entre mensajes queda activo
     renderQueue();
   }
 
@@ -1039,29 +922,6 @@
       }
     }, 1000);
   }
-
-  function startLockCountdown(){
-    checkLock();
-    if(lockTimer) clearInterval(lockTimer);
-    lockTimer = setInterval(function(){
-      if(!checkLock()){
-        clearInterval(lockTimer);
-      }
-    }, 15000);
-  }
-
-  ["chkHorario","cfgHoraDesde","cfgHoraHasta"].forEach(function(id){
-    document.getElementById(id).addEventListener("change", checkLock);
-  });
-
-  document.getElementById("cfgHardLimit").addEventListener("input", function(){
-    document.getElementById("hardLimitPreview").textContent = this.value || "30";
-    checkLock();
-  });
-  document.getElementById("cfgHardWindow").addEventListener("input", function(){
-    document.getElementById("hardWindowPreview").textContent = this.value || "4";
-    checkLock();
-  });
 
   // ---------- respaldo ----------
   document.getElementById("btnExportar").addEventListener("click", function(){
@@ -1196,7 +1056,6 @@
   document.getElementById("btnReset").addEventListener("click", function(){
     if(!confirm("Esto borra el historial de enviados (no las bajas) de esta lista en este teléfono. ¿Seguro?")) return;
     setSent({});
-    saveJSON(nsKey("batchcount"), {count:0});
     renderQueue();
   });
 
