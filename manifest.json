@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#0b2545">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="León Centro">
+<title>León Centro — Herramientas</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#0b2545;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .tabbar{
+    display:flex;
+    background:linear-gradient(150deg,#081a33 0%,#0b2545 55%,#123a6b 100%);
+    padding:10px 10px 0;
+    gap:6px;
+    flex:none;
+    box-shadow:0 4px 14px -8px rgba(8,26,51,.6);
+    position:relative;
+    z-index:5;
+  }
+  .tab{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    padding:12px 10px;
+    border:none;
+    background:rgba(255,255,255,.08);
+    color:rgba(255,255,255,.7);
+    font-size:13.5px;
+    font-weight:700;
+    border-radius:12px 12px 0 0;
+    cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  .tab .ic{font-size:15px;}
+  .tab.active{
+    background:#f3f6fa;
+    color:#0b2545;
+  }
+  .tab:not(.active):hover{background:rgba(255,255,255,.14);color:#fff;}
+  .frames{
+    flex:1;
+    position:relative;
+    background:#f3f6fa;
+  }
+  iframe{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    border:none;
+    background:#f3f6fa;
+    display:none;
+  }
+  iframe.active{display:block;}
+  .loading{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:10px;
+    color:#5c6b7d;
+    font-size:13px;
+    background:#f3f6fa;
+  }
+  .spinner{
+    width:26px;height:26px;
+    border:3px solid #e4e9ef;
+    border-top-color:#00b6f1;
+    border-radius:50%;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<div class="tabbar">
+  <button class="tab active" id="tabPromos" onclick="switchTab('promos')">
+    <span class="ic">📲</span> Promos
+  </button>
+  <button class="tab" id="tabChecklist" onclick="switchTab('checklist')">
+    <span class="ic">📋</span> Checklist
+  </button>
+</div>
+
+<div class="frames">
+  <div class="loading" id="loadingPromos"><div class="spinner"></div>Cargando Promos…</div>
+  <div class="loading hidden" id="loadingChecklist"><div class="spinner"></div>Cargando Checklist…</div>
+  <iframe id="framePromos" class="active" src="promos.html" title="Promos por WhatsApp"></iframe>
+  <iframe id="frameChecklist" title="Check List de Salida"></iframe>
+</div>
+
+<script>
+  var loadedChecklist = false;
+
+  document.getElementById('framePromos').addEventListener('load', function(){
+    document.getElementById('loadingPromos').classList.add('hidden');
+  });
+
+  function switchTab(which){
+    var isPromos = which === 'promos';
+    document.getElementById('tabPromos').classList.toggle('active', isPromos);
+    document.getElementById('tabChecklist').classList.toggle('active', !isPromos);
+    document.getElementById('framePromos').classList.toggle('active', isPromos);
+    document.getElementById('frameChecklist').classList.toggle('active', !isPromos);
+
+    if(!isPromos && !loadedChecklist){
+      loadedChecklist = true;
+      var frame = document.getElementById('frameChecklist');
+      frame.addEventListener('load', function(){
+        document.getElementById('loadingChecklist').classList.add('hidden');
+      });
+      frame.src = 'checklist_salida.html';
+    }
+  }
+
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+</script>
+
+</body>
+</html>
