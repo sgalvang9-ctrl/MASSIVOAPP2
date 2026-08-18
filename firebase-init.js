@@ -156,5 +156,38 @@ window.LC = {
   contarLlamadasHoy: function(attuid){
     var fecha = new Date().toISOString().slice(0,10);
     return LCDb.collection("llamadas").where("attuid","==",attuid).where("fecha","==",fecha).get().then(function(snap){ return snap.size; });
+  },
+
+  // ---------- Checklist: autoguardado por día en tiempo real ----------
+  checklistGuardarDia: function(perfil, semana, dia, datosDia){
+    var uid = LCAuth.currentUser ? LCAuth.currentUser.uid : null;
+    if(!uid) return Promise.resolve();
+    var id = uid + "_" + semana + "_" + dia;
+    var doc = Object.assign({}, datosDia, {
+      uid: uid, ejecutivo: perfil.nombre, attuid: perfil.attuid, tienda: perfil.tienda,
+      semana: semana, dia: dia,
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return LCDb.collection("checklistDias").doc(id).set(doc, {merge:true});
+  },
+
+  checklistCargarSemana: function(semana){
+    var uid = LCAuth.currentUser ? LCAuth.currentUser.uid : null;
+    if(!uid) return Promise.resolve({});
+    return LCDb.collection("checklistDias")
+      .where("uid","==",uid).where("semana","==",semana)
+      .get().then(function(snap){
+        var out = {};
+        snap.forEach(function(doc){ out[doc.data().dia] = doc.data(); });
+        return out;
+      });
+  },
+
+  checklistCargarEquipoSemana: function(semana){
+    return LCDb.collection("checklistDias").where("semana","==",semana).get().then(function(snap){
+      var out = [];
+      snap.forEach(function(doc){ out.push(doc.data()); });
+      return out;
+    });
   }
 };
