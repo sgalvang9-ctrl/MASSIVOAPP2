@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#0b2545">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="León Centro">
+<title>León Centro — Herramientas</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#0b2545;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .tabbar{
+    display:flex;
+    background:linear-gradient(150deg,#081a33 0%,#0b2545 55%,#123a6b 100%);
+    padding:10px 10px 0;
+    gap:6px;
+    flex:none;
+    box-shadow:0 4px 14px -8px rgba(8,26,51,.6);
+    position:relative;
+    z-index:5;
+  }
+  .tab{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    padding:12px 10px;
+    border:none;
+    background:rgba(255,255,255,.08);
+    color:rgba(255,255,255,.7);
+    font-size:13.5px;
+    font-weight:700;
+    border-radius:12px 12px 0 0;
+    cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  .tab .ic{font-size:15px;}
+  .tab.active{
+    background:#f3f6fa;
+    color:#0b2545;
+  }
+  .tab:not(.active):hover{background:rgba(255,255,255,.14);color:#fff;}
+  .frames{
+    flex:1;
+    position:relative;
+    background:#f3f6fa;
+  }
+  iframe{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    border:none;
+    background:#f3f6fa;
+    display:none;
+  }
+  iframe.active{display:block;}
+  .loading{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:10px;
+    color:#5c6b7d;
+    font-size:13px;
+    background:#f3f6fa;
+  }
+  .spinner{
+    width:26px;height:26px;
+    border:3px solid #e4e9ef;
+    border-top-color:#00b6f1;
+    border-radius:50%;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .hidden{display:none !important;}
+
+  /* ---------- login / registro ---------- */
+  .authScreen{
+    position:fixed; inset:0; z-index:50;
+    background:linear-gradient(150deg,#081a33 0%,#0b2545 55%,#123a6b 100%);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px; overflow-y:auto;
+  }
+  .authCard{
+    background:#fff; border-radius:18px; padding:28px 24px; width:100%; max-width:380px;
+    box-shadow:0 20px 50px -12px rgba(0,0,0,.5);
+  }
+  .authCard h1{font-size:19px;color:#0b2545;margin-bottom:4px;text-align:center;}
+  .authCard p.sub{font-size:12.5px;color:#5c6b7d;text-align:center;margin-bottom:18px;}
+  .authTabs{display:flex;gap:6px;background:#f3f6fa;padding:4px;border-radius:10px;margin-bottom:18px;}
+  .authTabs button{
+    flex:1;padding:9px;border:none;background:transparent;border-radius:8px;
+    font-size:13px;font-weight:700;color:#5c6b7d;cursor:pointer;
+  }
+  .authTabs button.active{background:#0b2545;color:#fff;}
+  .authField{margin-bottom:12px;}
+  .authField label{display:block;font-size:12px;font-weight:600;color:#5c6b7d;margin-bottom:5px;}
+  .authField input{
+    width:100%;padding:11px 12px;border:1.5px solid #e4e9ef;border-radius:9px;
+    font-size:14.5px;font-family:inherit;
+  }
+  .authField input:focus{outline:none;border-color:#00b6f1;}
+  .authBtn{
+    width:100%;padding:12px;border:none;border-radius:9px;background:linear-gradient(135deg,#123a6b,#0b2545);
+    color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;margin-top:4px;
+  }
+  .authBtn:disabled{opacity:.6;cursor:not-allowed;}
+  .authError{
+    background:#fdeaea;color:#c53434;border:1px solid #f0c9c9;border-radius:9px;
+    padding:10px 12px;font-size:12.5px;margin-bottom:12px;display:none;
+  }
+  .authError.show{display:block;}
+  .authForm.hidden{display:none;}
+  .userbar{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:8px 12px;background:#081a33;color:#fff;font-size:11.5px;flex:none;
+  }
+  .userbar .who{opacity:.85;}
+  .userbar button{
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;
+    border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA DE ACCESO -->
+<div class="authScreen" id="authScreen">
+  <div class="authCard">
+    <h1>León Centro — Herramientas</h1>
+    <p class="sub">Inicia sesión con tu cuenta de equipo.</p>
+
+    <div class="authTabs">
+      <button class="active" id="authTabLogin" onclick="switchAuthTab('login')">Iniciar sesión</button>
+      <button id="authTabSignup" onclick="switchAuthTab('signup')">Crear cuenta</button>
+    </div>
+
+    <div class="authError" id="authError"></div>
+
+    <form class="authForm" id="loginForm">
+      <div class="authField"><label>ATTUID</label><input type="text" id="loginAttuid" required autocomplete="username" placeholder="Ej. SGALV1234"></div>
+      <div class="authField"><label>Contraseña</label><input type="password" id="loginPassword" required autocomplete="current-password"></div>
+      <button type="submit" class="authBtn" id="loginBtn">Entrar</button>
+    </form>
+
+    <form class="authForm hidden" id="signupForm">
+      <div class="authField"><label>Tu nombre</label><input type="text" id="signupNombre" required></div>
+      <div class="authField"><label>ATTUID</label><input type="text" id="signupAttuid" required placeholder="Ej. SGALV1234"></div>
+      <div class="authField"><label>Tienda</label><input type="text" id="signupTienda" required placeholder="Ej. León Centro"></div>
+      <div class="authField"><label>Contraseña</label><input type="password" id="signupPassword" required minlength="6" autocomplete="new-password"></div>
+      <button type="submit" class="authBtn" id="signupBtn">Crear cuenta</button>
+    </form>
+  </div>
+</div>
+
+<!-- APP (solo visible con sesión activa) -->
+<div class="hidden" id="appShell" style="display:flex;flex-direction:column;height:100%;">
+
+<div class="userbar">
+  <span class="who" id="whoLabel">—</span>
+  <button onclick="cerrarSesion()">Cerrar sesión</button>
+</div>
+
+<div class="tabbar">
+  <button class="tab active" id="tabPromos" onclick="switchTab('promos')">
+    <span class="ic">📲</span> Promos
+  </button>
+  <button class="tab" id="tabLlamadas" onclick="switchTab('llamadas')">
+    <span class="ic">📞</span> Llamadas
+  </button>
+  <button class="tab" id="tabChecklist" onclick="switchTab('checklist')">
+    <span class="ic">📋</span> Checklist
+  </button>
+</div>
+
+<div class="frames">
+  <div class="loading" id="loadingPromos"><div class="spinner"></div>Cargando Promos…</div>
+  <div class="loading hidden" id="loadingLlamadas"><div class="spinner"></div>Cargando Llamadas…</div>
+  <div class="loading hidden" id="loadingChecklist"><div class="spinner"></div>Cargando Checklist…</div>
+  <iframe id="framePromos" class="active" src="promos.html" title="Promos por WhatsApp"></iframe>
+  <iframe id="frameLlamadas" title="Llamadas"></iframe>
+  <iframe id="frameChecklist" title="Check List de Salida"></iframe>
+</div>
+
+</div><!-- /appShell -->
+
+<script>
+  // ---------- login / registro ----------
+  function switchAuthTab(which){
+    document.getElementById('authTabLogin').classList.toggle('active', which==='login');
+    document.getElementById('authTabSignup').classList.toggle('active', which==='signup');
+    document.getElementById('loginForm').classList.toggle('hidden', which!=='login');
+    document.getElementById('signupForm').classList.toggle('hidden', which!=='signup');
+    hideAuthError();
+  }
+  function showAuthError(msg){
+    var el = document.getElementById('authError');
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+  function hideAuthError(){
+    document.getElementById('authError').classList.remove('show');
+  }
+  function mensajeError(err){
+    var code = err && err.code || '';
+    if(code === 'auth/email-already-in-use') return 'Ese correo ya tiene una cuenta — intenta iniciar sesión.';
+    if(code === 'auth/invalid-email') return 'Ese correo no es válido.';
+    if(code === 'auth/weak-password') return 'La contraseña necesita al menos 6 caracteres.';
+    if(code === 'auth/wrong-password' || code === 'auth/invalid-credential') return 'Correo o contraseña incorrectos.';
+    if(code === 'auth/user-not-found') return 'No hay cuenta con ese correo.';
+    if(code === 'auth/too-many-requests') return 'Demasiados intentos. Espera un momento.';
+    return (err && err.message) || 'Algo salió mal. Intenta de nuevo.';
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    hideAuthError();
+    var btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = 'Entrando…';
+    var attuid = document.getElementById('loginAttuid').value.trim();
+    var pass = document.getElementById('loginPassword').value;
+    LC.signIn(attuid, pass).catch(function(err){
+      showAuthError(mensajeError(err));
+    }).finally(function(){
+      btn.disabled = false; btn.textContent = 'Entrar';
+    });
+  });
+
+  document.getElementById('signupForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    hideAuthError();
+    var btn = document.getElementById('signupBtn');
+    btn.disabled = true; btn.textContent = 'Creando cuenta…';
+    var nombre = document.getElementById('signupNombre').value.trim();
+    var attuid = document.getElementById('signupAttuid').value.trim();
+    var tienda = document.getElementById('signupTienda').value.trim();
+    var pass = document.getElementById('signupPassword').value;
+    LC.signUp(nombre, attuid, tienda, pass).catch(function(err){
+      showAuthError(mensajeError(err));
+    }).finally(function(){
+      btn.disabled = false; btn.textContent = 'Crear cuenta';
+    });
+  });
+
+  function cerrarSesion(){
+    if(!confirm('¿Cerrar sesión?')) return;
+    LC.signOut();
+  }
+
+  LC.onAuthChange(function(user, perfil){
+    var authScreen = document.getElementById('authScreen');
+    var appShell = document.getElementById('appShell');
+    if(user && perfil){
+      authScreen.classList.add('hidden');
+      appShell.classList.remove('hidden');
+      document.getElementById('whoLabel').textContent = '🏬 ' + perfil.tienda + ' · ' + perfil.nombre + (perfil.rol==='gerente' ? ' (Gerente)' : '');
+    }else{
+      appShell.classList.add('hidden');
+      authScreen.classList.remove('hidden');
+    }
+  });
+</script>
+
+<script>
+  var TABS = ['promos', 'llamadas', 'checklist'];
+  var SRC = { llamadas: 'llamadas.html', checklist: 'checklist_salida.html' };
+  var loaded = { promos: true, llamadas: false, checklist: false };
+
+  document.getElementById('framePromos').addEventListener('load', function(){
+    document.getElementById('loadingPromos').classList.add('hidden');
+  });
+
+  function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function switchTab(which){
+    TABS.forEach(function(t){
+      document.getElementById('tab' + cap(t)).classList.toggle('active', t === which);
+      document.getElementById('frame' + cap(t)).classList.toggle('active', t === which);
+    });
+
+    if(which !== 'promos' && !loaded[which]){
+      loaded[which] = true;
+      var frame = document.getElementById('frame' + cap(which));
+      frame.addEventListener('load', function(){
+        document.getElementById('loading' + cap(which)).classList.add('hidden');
+      });
+      frame.src = SRC[which];
+    }
+  }
+
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+</script>
+
+</body>
+</html>

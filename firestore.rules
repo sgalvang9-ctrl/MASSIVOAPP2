@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Lista blanca de ATTUIDs autorizados. Se administra a mano desde la
+    // consola de Firebase (Firestore Database → colección "attuidsAutorizados")
+    // — ninguna app puede escribir aquí, solo leer para validar el registro.
+    match /attuidsAutorizados/{attuid} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Perfil de cada usuario. Solo el dueño puede leer/crear el suyo.
+    // El rol y el ATTUID no se pueden auto-asignar ni auto-cambiar:
+    // deben coincidir siempre con lo que diga la lista blanca.
+    match /usuarios/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      allow create: if request.auth != null && request.auth.uid == uid
+        && exists(/databases/$(database)/documents/attuidsAutorizados/$(request.resource.data.attuid))
+        && get(/databases/$(database)/documents/attuidsAutorizados/$(request.resource.data.attuid)).data.activo == true
+        && request.resource.data.rol == get(/databases/$(database)/documents/attuidsAutorizados/$(request.resource.data.attuid)).data.rol;
+
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.rol == resource.data.rol
+        && request.resource.data.attuid == resource.data.attuid;
+
+      allow delete: if false;
+    }
+
+  }
+}
