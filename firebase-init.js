@@ -189,5 +189,29 @@ window.LC = {
       snap.forEach(function(doc){ out.push(doc.data()); });
       return out;
     });
+  },
+
+  // ---------- Vista Gerencial: actividad real de la semana, directo de Firestore ----------
+  contarActividadSemana: function(semanaInicio){
+    var inicio = new Date(semanaInicio + "T00:00:00");
+    var fin = new Date(inicio); fin.setDate(fin.getDate() + 6);
+    var fechaInicio = semanaInicio;
+    var fechaFin = fin.toISOString().slice(0,10);
+
+    var mensajesQ = LCDb.collection("envios").where("fecha",">=",fechaInicio).where("fecha","<=",fechaFin).get();
+    var llamadasQ = LCDb.collection("llamadas").where("fecha",">=",fechaInicio).where("fecha","<=",fechaFin).get();
+
+    return Promise.all([mensajesQ, llamadasQ]).then(function(results){
+      var mensajesPorAttuid = {}, llamadasPorAttuid = {};
+      results[0].forEach(function(doc){
+        var a = doc.data().attuid || "(sin ATTUID)";
+        mensajesPorAttuid[a] = (mensajesPorAttuid[a] || 0) + 1;
+      });
+      results[1].forEach(function(doc){
+        var a = doc.data().attuid || "(sin ATTUID)";
+        llamadasPorAttuid[a] = (llamadasPorAttuid[a] || 0) + 1;
+      });
+      return { mensajesPorAttuid: mensajesPorAttuid, llamadasPorAttuid: llamadasPorAttuid };
+    });
   }
 };
