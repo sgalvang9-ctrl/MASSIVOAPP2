@@ -27,6 +27,7 @@ LCAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
 function emailDeAttuid(attuid){
   return String(attuid || "").trim().toLowerCase().replace(/[^a-z0-9]/g,"") + "@leoncentro.app";
 }
+function slugify(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-"); }
 
 window.LC = {
   auth: LCAuth,
@@ -104,5 +105,56 @@ window.LC = {
         callback(user, perfil);
       });
     });
+  },
+
+  // ---------- Promos: registro de envíos y estado de contactos ----------
+  registrarEnvio: function(perfil){
+    var fecha = new Date().toISOString().slice(0,10);
+    return LCDb.collection("envios").add({
+      tienda: perfil.tienda, ejecutivo: perfil.nombre, attuid: perfil.attuid,
+      uid: LCAuth.currentUser ? LCAuth.currentUser.uid : null,
+      fecha: fecha,
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function(){ /* nunca debe romper el envío por esto */ });
+  },
+
+  promosSetEstado: function(tienda, phone, estado){
+    var id = slugify(tienda) + "__" + phone;
+    return LCDb.collection("promosContactos").doc(id).set({
+      tienda: tienda, phone: phone, estado: estado,
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  },
+  promosClearEstado: function(tienda, phone){
+    var id = slugify(tienda) + "__" + phone;
+    return LCDb.collection("promosContactos").doc(id).delete();
+  },
+  promosGetEstados: function(tienda){
+    return LCDb.collection("promosContactos").where("tienda","==",tienda).get().then(function(snap){
+      var out = {};
+      snap.forEach(function(doc){ out[doc.data().phone] = doc.data(); });
+      return out;
+    });
+  },
+
+  // ---------- Llamadas: registro de resultado ----------
+  registrarLlamada: function(perfil, resultado){
+    var fecha = new Date().toISOString().slice(0,10);
+    return LCDb.collection("llamadas").add({
+      tienda: perfil.tienda, ejecutivo: perfil.nombre, attuid: perfil.attuid,
+      uid: LCAuth.currentUser ? LCAuth.currentUser.uid : null,
+      resultado: resultado, fecha: fecha,
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function(){});
+  },
+
+  // ---------- conteo de actividad del día, por ATTUID ----------
+  contarMensajesHoy: function(attuid){
+    var fecha = new Date().toISOString().slice(0,10);
+    return LCDb.collection("envios").where("attuid","==",attuid).where("fecha","==",fecha).get().then(function(snap){ return snap.size; });
+  },
+  contarLlamadasHoy: function(attuid){
+    var fecha = new Date().toISOString().slice(0,10);
+    return LCDb.collection("llamadas").where("attuid","==",attuid).where("fecha","==",fecha).get().then(function(snap){ return snap.size; });
   }
 };
