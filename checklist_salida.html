@@ -464,6 +464,7 @@ function buildDayPanel(dayIdx) {
         ${[['pospagonuevo','Pospago equipo nuevo'],['pospagopropio','Pospago equipo propio'],['renovacion','Renovación'],['accesorios','Accesorios'],['seguros','Seguros']].map(([key,label])=>`<div class="activo-card"><div class="activo-label">${label}</div><input type="number" min="0" id="${d}-activo-${key}" placeholder="0" oninput="markDirty(${dayIdx});refreshAllCompromisoChecks();renderSummary()"></div>`).join('')}
       </div>
       <div id="${d}-compromiso-check" style="margin-top:16px"></div>
+      <div id="${d}-autosave-status" style="font-size:11px;color:var(--accent);margin-top:8px;text-align:right;min-height:14px;"></div>
     </div>
 
     <div class="card-full">
@@ -600,6 +601,7 @@ function refreshAllCompromisoChecks() {
 function removeRow(row) { row.remove(); }
 function markDirty(dayIdx) {
   document.querySelector(`.day-tab[data-day="${dayIdx}"]`).classList.add('has-data');
+  programarAutoguardado(DAYS[dayIdx], dayIdx);
 }
 
 // ── SUMMARY ─────────────────────────────────────────────────────
@@ -970,7 +972,19 @@ function updateSemana() {
   document.getElementById('semana-label').textContent =
     `Semana ${d.toLocaleDateString('es-MX', opts)} – ${end.toLocaleDateString('es-MX', opts)}`;
   DAYS.forEach((d,i) => refreshActividad(d, i, true));
+  cargarSemanaDesdeFirestore(val);
   if (currentDay === 7) renderSummary();
+}
+
+function cargarSemanaDesdeFirestore(semana) {
+  if (!window.LC || !window.LC_PERFIL || !semana) return;
+  LC.checklistCargarSemana(semana).then(datosPorDia => {
+    DAYS.forEach((d, i) => {
+      if (datosPorDia[d]) rellenarDatosDia(d, i, datosPorDia[d]);
+    });
+    refreshAllCompromisoChecks();
+    if (currentDay === 7) renderSummary();
+  }).catch(() => {});
 }
 
 function fechaLunesActual() {
@@ -1089,6 +1103,116 @@ function requireEjecutivoName() {
   return true;
 }
 
+// ── DATOS DE UN DÍA (recolectar / rellenar) ──────────────────────
+function recolectarDatosDia(d) {
+  return {
+    crm: {
+      pos: document.getElementById(`${d}-crm-pos`)?.value || '',
+      ren: document.getElementById(`${d}-crm-ren`)?.value || ''
+    },
+    citasConfirmadas: [...(document.getElementById(`${d}-citasconf-body`)?.querySelectorAll('tr') || [])].map(tr => {
+      const ins = tr.querySelectorAll('input, select');
+      return { tipo: ins[0]?.value, detalle: ins[1]?.value };
+    }).filter(c => c.tipo || c.detalle),
+    prospeccion: {
+      campanas: document.getElementById(`${d}-prosp-campanas`)?.value || '',
+      llamadas: document.getElementById(`${d}-prosp-llamadas`)?.value || '',
+      mensajes: document.getElementById(`${d}-prosp-mensajes`)?.value || ''
+    },
+    resenas: document.getElementById(`${d}-resenas-cuantas`)?.value || '',
+    limpieza: {
+      rol: document.getElementById(`${d}-limp-rol`)?.value || '',
+      validadoPor: document.getElementById(`${d}-limp-validado`)?.value || ''
+    },
+    activos: {
+      pospagoNuevo: document.getElementById(`${d}-activo-pospagonuevo`)?.value || '',
+      pospagoPropio: document.getElementById(`${d}-activo-pospagopropio`)?.value || '',
+      renovacion: document.getElementById(`${d}-activo-renovacion`)?.value || '',
+      accesorios: document.getElementById(`${d}-activo-accesorios`)?.value || '',
+      seguros: document.getElementById(`${d}-activo-seguros`)?.value || ''
+    },
+    arpu: {
+      equipoNuevo: document.getElementById(`${d}-arpu-equiponuevo`)?.value || '',
+      equipoPropio: document.getElementById(`${d}-arpu-equipopropio`)?.value || '',
+      renovaciones: document.getElementById(`${d}-arpu-renovaciones`)?.value || ''
+    },
+    yubikey: {
+      cantidad: document.getElementById(`${d}-yubikey-cantidad`)?.value || '',
+      aQuien: document.getElementById(`${d}-yubikey-aquien`)?.value || ''
+    },
+    chequeSalida: document.getElementById(`${d}-cheque-salida`)?.checked || false,
+    caja: {
+      efectivo: document.getElementById(`${d}-total-efectivo`)?.value || '',
+      tarjeta: document.getElementById(`${d}-total-tarjeta`)?.value || ''
+    }
+  };
+}
+
+function setVal(id, v){ const el = document.getElementById(id); if(el) el.value = v ?? ''; }
+
+function rellenarDatosDia(d, dayIdx, datos) {
+  if (!datos) return;
+  setVal(`${d}-crm-pos`, datos.crm?.pos);
+  setVal(`${d}-crm-ren`, datos.crm?.ren);
+  setVal(`${d}-prosp-campanas`, datos.prospeccion?.campanas);
+  // mensajes y llamadas se jalan solas por su propio botón 🔄, no se sobreescriben aquí
+  setVal(`${d}-resenas-cuantas`, datos.resenas);
+  setVal(`${d}-limp-rol`, datos.limpieza?.rol);
+  setVal(`${d}-limp-validado`, datos.limpieza?.validadoPor);
+  setVal(`${d}-activo-pospagonuevo`, datos.activos?.pospagoNuevo);
+  setVal(`${d}-activo-pospagopropio`, datos.activos?.pospagoPropio);
+  setVal(`${d}-activo-renovacion`, datos.activos?.renovacion);
+  setVal(`${d}-activo-accesorios`, datos.activos?.accesorios);
+  setVal(`${d}-activo-seguros`, datos.activos?.seguros);
+  setVal(`${d}-arpu-equiponuevo`, datos.arpu?.equipoNuevo);
+  setVal(`${d}-arpu-equipopropio`, datos.arpu?.equipoPropio);
+  setVal(`${d}-arpu-renovaciones`, datos.arpu?.renovaciones);
+  setVal(`${d}-yubikey-cantidad`, datos.yubikey?.cantidad);
+  setVal(`${d}-yubikey-aquien`, datos.yubikey?.aQuien);
+  const cheque = document.getElementById(`${d}-cheque-salida`);
+  if (cheque) cheque.checked = !!datos.chequeSalida;
+  setVal(`${d}-total-efectivo`, datos.caja?.efectivo);
+  setVal(`${d}-total-tarjeta`, datos.caja?.tarjeta);
+
+  if (Array.isArray(datos.citasConfirmadas) && datos.citasConfirmadas.length) {
+    const body = document.getElementById(`${d}-citasconf-body`);
+    if (body) {
+      body.innerHTML = '';
+      citaConfCounters[dayIdx] = 0;
+      datos.citasConfirmadas.forEach(() => addCitaConfRow(d, dayIdx));
+      datos.citasConfirmadas.forEach((c, i) => {
+        setVal(`${d}-citasconf-tipo-${i}`, c.tipo);
+        setVal(`${d}-citasconf-detalle-${i}`, c.detalle);
+      });
+    }
+  }
+
+  const hayDatos = datos.crm?.pos || datos.crm?.ren || datos.prospeccion?.campanas ||
+    datos.activos?.pospagoNuevo || datos.activos?.pospagoPropio || datos.activos?.renovacion ||
+    datos.activos?.accesorios || datos.activos?.seguros || datos.resenas ||
+    (datos.citasConfirmadas && datos.citasConfirmadas.length);
+  if (hayDatos) markDirty(dayIdx);
+}
+
+// ── AUTOGUARDADO (debounced, un timer por día) ───────────────────
+const autosaveTimers = {};
+function programarAutoguardado(d, dayIdx) {
+  if (!window.LC || !window.LC_PERFIL) return;
+  clearTimeout(autosaveTimers[d]);
+  autosaveTimers[d] = setTimeout(() => {
+    const semana = document.getElementById('semana-inicio')?.value;
+    if (!semana) return;
+    const datos = recolectarDatosDia(d);
+    LC.checklistGuardarDia(window.LC_PERFIL, semana, d, datos).then(() => {
+      const status = document.getElementById(`${d}-autosave-status`);
+      if (status) {
+        status.textContent = '✓ Guardado ' + new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+        setTimeout(() => { if (status.textContent.indexOf('✓') === 0) status.textContent = ''; }, 4000);
+      }
+    }).catch(() => {});
+  }, 1200);
+}
+
 // ── SAVE / CLEAR ────────────────────────────────────────────────
 async function saveData() {
   if (!requireEjecutivoName()) return;
@@ -1112,47 +1236,7 @@ async function saveData() {
   };
 
   DAYS.forEach(d => {
-    payload.dias[d] = {
-      crm: {
-        pos: document.getElementById(`${d}-crm-pos`)?.value || '',
-        ren: document.getElementById(`${d}-crm-ren`)?.value || ''
-      },
-      citasConfirmadas: [...(document.getElementById(`${d}-citasconf-body`)?.querySelectorAll('tr') || [])].map(tr => {
-        const ins = tr.querySelectorAll('input, select');
-        return { tipo: ins[0]?.value, detalle: ins[1]?.value };
-      }).filter(c => c.tipo || c.detalle),
-      prospeccion: {
-        campanas: document.getElementById(`${d}-prosp-campanas`)?.value || '',
-        llamadas: document.getElementById(`${d}-prosp-llamadas`)?.value || '',
-        mensajes: document.getElementById(`${d}-prosp-mensajes`)?.value || ''
-      },
-      resenas: document.getElementById(`${d}-resenas-cuantas`)?.value || '',
-      limpieza: {
-        rol: document.getElementById(`${d}-limp-rol`)?.value || '',
-        validadoPor: document.getElementById(`${d}-limp-validado`)?.value || ''
-      },
-      activos: {
-        pospagoNuevo: document.getElementById(`${d}-activo-pospagonuevo`)?.value || '',
-        pospagoPropio: document.getElementById(`${d}-activo-pospagopropio`)?.value || '',
-        renovacion: document.getElementById(`${d}-activo-renovacion`)?.value || '',
-        accesorios: document.getElementById(`${d}-activo-accesorios`)?.value || '',
-        seguros: document.getElementById(`${d}-activo-seguros`)?.value || ''
-      },
-      arpu: {
-        equipoNuevo: document.getElementById(`${d}-arpu-equiponuevo`)?.value || '',
-        equipoPropio: document.getElementById(`${d}-arpu-equipopropio`)?.value || '',
-        renovaciones: document.getElementById(`${d}-arpu-renovaciones`)?.value || ''
-      },
-      yubikey: {
-        cantidad: document.getElementById(`${d}-yubikey-cantidad`)?.value || '',
-        aQuien: document.getElementById(`${d}-yubikey-aquien`)?.value || ''
-      },
-      chequeSalida: document.getElementById(`${d}-cheque-salida`)?.checked || false,
-      caja: {
-        efectivo: document.getElementById(`${d}-total-efectivo`)?.value || '',
-        tarjeta: document.getElementById(`${d}-total-tarjeta`)?.value || ''
-      }
-    };
+    payload.dias[d] = recolectarDatosDia(d);
   });
 
   const sheetsUrl = document.getElementById('masivoapp-url')?.value.trim();
@@ -1463,11 +1547,43 @@ document.getElementById('print-modal').addEventListener('click', function(e) {
   if (e.target === this) closePrintModal();
 });
 
-// ── INIT: config guardada + semana automática ────────────────────
-loadChecklistConfig();
-autoSetSemanaActual();
-if (document.getElementById('masivoapp-url').value && document.getElementById('ejecutivo-attuid').value) {
-  refreshActividad(DAYS[0], 0, true);
+// ── INIT: identidad desde Firebase + semana automática ────────────
+window.LC_PERFIL = null;
+
+if (window.LC) {
+  LC.onAuthChange(function(user, perfil) {
+    if (user && perfil) {
+      loadChecklistConfig(); // rellena masivoapp-url si ya estaba guardada
+      window.LC_PERFIL = perfil;
+      document.getElementById('ejecutivo-name').value = perfil.nombre;
+      document.getElementById('ejecutivo-attuid').value = perfil.attuid;
+      ['ejecutivo-name', 'ejecutivo-attuid'].forEach(id => {
+        const el = document.getElementById(id);
+        el.setAttribute('readonly', 'readonly');
+        el.style.background = 'var(--surface2)';
+      });
+      updateHeader();
+      document.getElementById('name-gate').classList.add('hidden');
+      autoSetSemanaActual();
+      const semana = document.getElementById('semana-inicio').value;
+      if (semana) cargarSemanaDesdeFirestore(semana);
+      if (document.getElementById('masivoapp-url').value && perfil.attuid) {
+        refreshActividad(DAYS[0], 0, true);
+      }
+    } else {
+      loadChecklistConfig();
+      autoSetSemanaActual();
+      if (document.getElementById('masivoapp-url').value && document.getElementById('ejecutivo-attuid').value) {
+        refreshActividad(DAYS[0], 0, true);
+      }
+    }
+  });
+} else {
+  loadChecklistConfig();
+  autoSetSemanaActual();
+  if (document.getElementById('masivoapp-url').value && document.getElementById('ejecutivo-attuid').value) {
+    refreshActividad(DAYS[0], 0, true);
+  }
 }
 
 </script>
