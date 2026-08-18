@@ -668,16 +668,19 @@
   }
 
   document.getElementById("btnProcesar").addEventListener("click", function(){
-    var colPhoneIdx = parseInt(document.getElementById("colPhone").value, 10);
-    var colNameIdx = parseInt(document.getElementById("colName").value, 10);
-    var hasHeader = document.getElementById("chkHeader").checked;
-    var startRow = hasHeader ? 1 : 0;
+    var procesarBtn = this;
 
-    var suppressed = loadJSON(nsKey("suppressed"), {});
-    var noExisteList = loadJSON(nsKey("noexiste"), {});
-    var sentHistory = getSent();
-    var cooldownDays = parseFloat(document.getElementById("cfgEnfriamiento").value) || 0;
-    var cooldownMs = cooldownDays * 86400000;
+    function continuarProcesamiento(){
+      var colPhoneIdx = parseInt(document.getElementById("colPhone").value, 10);
+      var colNameIdx = parseInt(document.getElementById("colName").value, 10);
+      var hasHeader = document.getElementById("chkHeader").checked;
+      var startRow = hasHeader ? 1 : 0;
+
+      var suppressed = loadJSON(nsKey("suppressed"), {});
+      var noExisteList = loadJSON(nsKey("noexiste"), {});
+      var sentHistory = getSent();
+      var cooldownDays = parseFloat(document.getElementById("cfgEnfriamiento").value) || 0;
+      var cooldownMs = cooldownDays * 86400000;
     var now = Date.now();
     var seen = {};
     var validos = [], duplicados = 0, invalidos = 0, enBaja = 0, enEnfriamiento = 0, enNoExiste = 0;
@@ -709,9 +712,38 @@
     document.getElementById("repNoExiste").textContent = enNoExiste;
     document.getElementById("cleanReport").classList.remove("hidden");
 
-    logUpload(cleanStats);
-    renderQueue();
-    updateStats();
+      logUpload(cleanStats);
+      renderQueue();
+      updateStats();
+    }
+
+    if(window.LC && config.tienda){
+      procesarBtn.disabled = true;
+      var textoOriginal = procesarBtn.textContent;
+      procesarBtn.textContent = "Sincronizando…";
+      LC.promosGetEstados(config.tienda).then(function(estados){
+        var suppressed = loadJSON(nsKey("suppressed"), {});
+        var noExisteList = loadJSON(nsKey("noexiste"), {});
+        var sent = getSent();
+        Object.keys(estados).forEach(function(phone){
+          var e = estados[phone];
+          var ts = (e.ts && e.ts.toMillis) ? e.ts.toMillis() : Date.now();
+          if(e.estado === "baja") suppressed[phone] = {ts: ts};
+          else if(e.estado === "noExiste") noExisteList[phone] = {ts: ts};
+          else if(e.estado === "sent") sent[phone] = {ts: ts};
+        });
+        setSuppressed(suppressed);
+        setNoExiste(noExisteList);
+        setSent(sent);
+      }).catch(function(){ /* si falla la sincronización, seguimos con lo local */ })
+      .finally(function(){
+        procesarBtn.disabled = false;
+        procesarBtn.textContent = textoOriginal;
+        continuarProcesamiento();
+      });
+    }else{
+      continuarProcesamiento();
+    }
   });
 
   // ---------- bitácora de cargas ----------
@@ -890,6 +922,7 @@
             var s = getSuppressed();
             s[c.phone] = {ts: Date.now()};
             setSuppressed(s);
+            if(window.LC) LC.promosSetEstado(config.tienda, c.phone, "baja").catch(function(){});
             renderQueue();
           }
         });
@@ -904,6 +937,7 @@
             var n = getNoExiste();
             n[c.phone] = {ts: Date.now()};
             setNoExiste(n);
+            if(window.LC) LC.promosSetEstado(config.tienda, c.phone, "noExiste").catch(function(){});
             renderQueue();
           }
         });
@@ -917,6 +951,7 @@
           var s = getSuppressed();
           delete s[c.phone];
           setSuppressed(s);
+          if(window.LC) LC.promosClearEstado(config.tienda, c.phone).catch(function(){});
           renderQueue();
         });
         acts.appendChild(undoBtn);
@@ -929,6 +964,7 @@
           var n = getNoExiste();
           delete n[c.phone];
           setNoExiste(n);
+          if(window.LC) LC.promosClearEstado(config.tienda, c.phone).catch(function(){});
           renderQueue();
         });
         acts.appendChild(undoBtn2);
@@ -1019,6 +1055,10 @@
     sent[c.phone] = {ts: Date.now()};
     setSent(sent);
     sendToSheet();
+    if(window.LC){
+      LC.registrarEnvio(config);
+      LC.promosSetEstado(config.tienda, c.phone, "sent").catch(function(){});
+    }
 
     var intervaloSeg = 15; // fijo — no editable por el ejecutivo
     if(!isNaN(intervaloSeg) && intervaloSeg > 0){
@@ -1188,7 +1228,38 @@
   });
 
   // ---------- init ----------
-  initConfigScreen();
+  if(window.LC){
+    LC.onAuthChange(function(user, perfil){
+      if(user && perfil){
+        var saved = loadGlobalConfig() || {};
+        config = {
+          tienda: perfil.tienda,
+          ejecutivo: perfil.nombre,
+          attuid: perfil.attuid,
+          lada: saved.lada || "52",
+          remitente: saved.remitente || perfil.nombre,
+          sheetUrl: saved.sheetUrl || ""
+        };
+        saveJSON(STORAGE_PREFIX + "config", config);
+        document.getElementById("cfgTienda").value = config.tienda;
+        document.getElementById("cfgEjecutivo").value = config.ejecutivo;
+        document.getElementById("cfgAttuid").value = config.attuid;
+        document.getElementById("cfgLada").value = config.lada;
+        document.getElementById("cfgRemitente").value = config.remitente;
+        document.getElementById("cfgSheetUrl").value = config.sheetUrl;
+        ["cfgTienda","cfgEjecutivo","cfgAttuid"].forEach(function(id){
+          document.getElementById(id).setAttribute("readonly","readonly");
+          document.getElementById(id).style.background = "#eef1f5";
+        });
+        fetchControlConfig();
+      }else{
+        // sin sesión de Firebase (acceso directo fuera de la concha) — flujo manual de antes
+        initConfigScreen();
+      }
+    });
+  }else{
+    initConfigScreen();
+  }
   setInterval(checkLock, 15000);
 })();
 </script>
