@@ -594,6 +594,7 @@
           l[c.phone] = {resultado: pair[0], ts: Date.now()};
           setLlamadas(l);
           sendToSheet(pair[0]);
+          if(window.LC) LC.registrarLlamada(config, pair[0]);
           renderQueue();
         });
         resRow.appendChild(b);
@@ -631,7 +632,35 @@
   });
 
   // ---------- init ----------
-  initConfigScreen();
+  if(window.LC){
+    LC.onAuthChange(function(user, perfil){
+      if(user && perfil){
+        var saved = loadGlobalConfig() || {};
+        config = {
+          tienda: perfil.tienda,
+          ejecutivo: perfil.nombre,
+          attuid: perfil.attuid,
+          lada: saved.lada || "52",
+          sheetUrl: saved.sheetUrl || ""
+        };
+        saveJSON(STORAGE_PREFIX + "config", config);
+        document.getElementById("cfgTienda").value = config.tienda;
+        document.getElementById("cfgEjecutivo").value = config.ejecutivo;
+        document.getElementById("cfgAttuid").value = config.attuid;
+        document.getElementById("cfgLada").value = config.lada;
+        document.getElementById("cfgSheetUrl").value = config.sheetUrl;
+        ["cfgTienda","cfgEjecutivo","cfgAttuid"].forEach(function(id){
+          document.getElementById(id).setAttribute("readonly","readonly");
+          document.getElementById(id).style.background = "#eef1f5";
+        });
+        showApp();
+      }else{
+        initConfigScreen();
+      }
+    });
+  }else{
+    initConfigScreen();
+  }
 })();
 </script>
 </body>
