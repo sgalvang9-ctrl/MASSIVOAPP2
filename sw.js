@@ -1,4 +1,4 @@
-const CACHE_NAME = "leoncentro-v12";
+const CACHE_NAME = "leoncentro-v14";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -7,14 +7,21 @@ const CORE_ASSETS = [
   "./llamadas.html",
   "./firebase-init.js",
   "./manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
+// Instalación resiliente: si un recurso falla, NO se cae toda la instalación.
+// (Antes usábamos cache.addAll, que falla completo si un solo archivo da 404 —
+// eso dejó service workers viejos atorados sirviendo copias viejas de la app.)
 self.addEventListener("install", function(event){
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache){
-      return cache.addAll(CORE_ASSETS);
+      return Promise.all(
+        CORE_ASSETS.map(function(asset){
+          return cache.add(asset).catch(function(){ /* recurso opcional faltante: continuar */ });
+        })
+      );
     })
   );
   self.skipWaiting();
@@ -32,15 +39,33 @@ self.addEventListener("activate", function(event){
   self.clients.claim();
 });
 
-// Cache-first para el cascarón de la app; network-first (con fallback a caché) para todo lo demás.
+// HTML y navegación: SIEMPRE red primero (con fallback a caché si no hay internet).
+// Así, cada vez que subimos una versión nueva, se ve de inmediato — nunca más
+// una copia vieja atorada. Solo los recursos estáticos usan cache-first.
 self.addEventListener("fetch", function(event){
   var req = event.request;
   if(req.method !== "GET") return;
 
   var url = new URL(req.url);
   var isCore = url.origin === self.location.origin;
+  var esHTML = req.mode === "navigate" || (req.headers.get("accept") || "").indexOf("text/html") !== -1 || url.pathname.endsWith(".html") || url.pathname.endsWith("/");
+  var esJS = url.pathname.endsWith(".js");
 
-  if(isCore){
+  if(isCore && (esHTML || esJS)){
+    // network-first: siempre intenta traer lo más nuevo
+    event.respondWith(
+      fetch(req).then(function(res){
+        var resClone = res.clone();
+        caches.open(CACHE_NAME).then(function(cache){ cache.put(req, resClone); });
+        return res;
+      }).catch(function(){
+        return caches.match(req).then(function(cached){
+          return cached || caches.match("./index.html");
+        });
+      })
+    );
+  }else if(isCore){
+    // estáticos propios (iconos, manifest): cache-first
     event.respondWith(
       caches.match(req).then(function(cached){
         return cached || fetch(req).then(function(res){
@@ -48,12 +73,10 @@ self.addEventListener("fetch", function(event){
           caches.open(CACHE_NAME).then(function(cache){ cache.put(req, resClone); });
           return res;
         });
-      }).catch(function(){
-        return caches.match("./index.html");
       })
     );
   }else{
-    // librerías externas (SheetJS, jsPDF): intenta red, si falla usa lo que haya en caché
+    // librerías externas: red primero, caché de respaldo
     event.respondWith(
       fetch(req).then(function(res){
         var resClone = res.clone();
