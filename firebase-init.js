@@ -115,7 +115,7 @@ window.LC = {
       uid: LCAuth.currentUser ? LCAuth.currentUser.uid : null,
       fecha: fecha,
       ts: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(function(){ /* nunca debe romper el envío por esto */ });
+    });
   },
 
   promosSetEstado: function(tienda, phone, estado){
@@ -145,7 +145,7 @@ window.LC = {
       uid: LCAuth.currentUser ? LCAuth.currentUser.uid : null,
       resultado: resultado, fecha: fecha,
       ts: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(function(){});
+    });
   },
 
   // ---------- conteo de actividad del día, por ATTUID ----------
