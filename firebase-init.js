@@ -120,8 +120,11 @@ window.LC = {
   // ---------- Promos: registro de envíos y estado de contactos ----------
   registrarEnvio: function(perfil){
     var fecha = fechaLocal();
+    perfil = perfil || {};
     return LCDb.collection("envios").add({
-      tienda: perfil.tienda, ejecutivo: perfil.nombre, attuid: perfil.attuid,
+      tienda: perfil.tienda || "",
+      ejecutivo: perfil.nombre || perfil.ejecutivo || "",
+      attuid: perfil.attuid || "",
       uid: LCAuth.currentUser ? LCAuth.currentUser.uid : null,
       fecha: fecha,
       ts: firebase.firestore.FieldValue.serverTimestamp()
@@ -150,10 +153,14 @@ window.LC = {
   // ---------- Llamadas: registro de resultado ----------
   registrarLlamada: function(perfil, resultado){
     var fecha = fechaLocal();
+    perfil = perfil || {};
     return LCDb.collection("llamadas").add({
-      tienda: perfil.tienda, ejecutivo: perfil.nombre, attuid: perfil.attuid,
+      tienda: perfil.tienda || "",
+      ejecutivo: perfil.nombre || perfil.ejecutivo || "",
+      attuid: perfil.attuid || "",
       uid: LCAuth.currentUser ? LCAuth.currentUser.uid : null,
-      resultado: resultado, fecha: fecha,
+      resultado: resultado || "",
+      fecha: fecha,
       ts: firebase.firestore.FieldValue.serverTimestamp()
     });
   },
