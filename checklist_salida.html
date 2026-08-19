@@ -608,11 +608,10 @@ function markDirty(dayIdx) {
 function nv(id) { const el = document.getElementById(id); return el ? (parseFloat(el.value)||0) : 0; }
 
 async function renderVistaGerencial(panel) {
-  const url = document.getElementById('masivoapp-url')?.value.trim();
   const semana = document.getElementById('semana-inicio')?.value;
 
-  if (!url) {
-    panel.innerHTML = `<div class="mgr-notice"><strong>🏢 Vista Gerencial</strong>Pega la URL del Sheet compartido (campo "URL reporte MasivoApp" arriba) para ver los reportes de tu equipo.</div>`;
+  if (!window.LC) {
+    panel.innerHTML = `<div class="mgr-notice"><strong>🏢 Vista Gerencial</strong>Esta vista necesita sesión de Firebase.</div>`;
     return;
   }
   if (!semana) {
@@ -620,83 +619,82 @@ async function renderVistaGerencial(panel) {
     return;
   }
 
-  panel.innerHTML = `<div class="mgr-notice"><strong>⏳ Cargando…</strong>Consultando reportes del equipo.</div>`;
+  panel.innerHTML = `<div class="mgr-notice"><strong>⏳ Cargando…</strong>Consultando actividad del equipo en tiempo real.</div>`;
 
-  let data;
+  let filas, actividad;
   try {
-    const resp = await fetch(`${url}?vista=gerencial&semana=${semana}`);
-    data = await resp.json();
+    [filas, actividad] = await Promise.all([
+      LC.checklistCargarEquipoSemana(semana),
+      LC.contarActividadSemana(semana)
+    ]);
   } catch (err) {
-    panel.innerHTML = `<div class="mgr-notice"><strong>🏢 Vista Gerencial</strong>No se pudo conectar al Sheet. Revisa tu conexión o la URL configurada.</div>`;
-    return;
-  }
-  if (!data || !data.ok) {
-    panel.innerHTML = `<div class="mgr-notice"><strong>🏢 Vista Gerencial</strong>El Sheet no respondió correctamente.</div>`;
+    panel.innerHTML = `<div class="mgr-notice"><strong>🏢 Vista Gerencial</strong>No se pudo consultar Firestore. Intenta de nuevo en un momento.</div>`;
     return;
   }
 
-  const filas = data.filas || [];
-  const mensajesPorAttuid = data.mensajesPorAttuid || {};
+  const mensajesPorAttuid = actividad.mensajesPorAttuid || {};
+  const llamadasPorAttuid = actividad.llamadasPorAttuid || {};
 
-  if (!filas.length && !Object.keys(mensajesPorAttuid).length) {
-    panel.innerHTML = `<div class="mgr-notice"><strong>🏢 Vista Gerencial</strong>Nadie del equipo ha guardado datos de esta semana todavía.</div>`;
+  if (!filas.length && !Object.keys(mensajesPorAttuid).length && !Object.keys(llamadasPorAttuid).length) {
+    panel.innerHTML = `<div class="mgr-notice"><strong>🏢 Vista Gerencial</strong>Nadie del equipo tiene actividad registrada esta semana todavía.</div>`;
     return;
   }
 
-  // Agrupa por ejecutivo
+  // Agrupa por ejecutivo (los documentos de checklistDias ya vienen uno por día)
   const porEjecutivo = {};
   filas.forEach(f => {
-    const nombre = f['Ejecutivo'] || '(sin nombre)';
+    const nombre = f.ejecutivo || '(sin nombre)';
     if (!porEjecutivo[nombre]) {
-      porEjecutivo[nombre] = { attuid: f['ATTUID']||'', pos:0, ren:0, campanas:0, llamadas:0, resenas:0,
+      porEjecutivo[nombre] = { attuid: f.attuid||'', pos:0, ren:0, campanas:0, resenas:0,
         pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0,
-        arpuNuevo:0, arpuPropio:0, arpuRenovaciones:0, efectivo:0, tarjeta:0, yubikeys:0, dias:0 };
+        arpuNuevo:0, arpuPropio:0, arpuRenovaciones:0, efectivo:0, tarjeta:0, dias:0 };
     }
     const e = porEjecutivo[nombre];
     e.dias++;
-    e.pos += Number(f['Prospectos POS'])||0;
-    e.ren += Number(f['Prospectos REN'])||0;
-    e.campanas += Number(f['Campañas'])||0;
-    e.llamadas += Number(f['Llamadas'])||0;
-    e.resenas += Number(f['Reseñas'])||0;
-    e.pospagoNuevo += Number(f['Pospago nuevo'])||0;
-    e.pospagoPropio += Number(f['Pospago propio'])||0;
-    e.renovacion += Number(f['Renovación'])||0;
-    e.accesorios += Number(f['Accesorios'])||0;
-    e.seguros += Number(f['Seguros'])||0;
-    e.arpuNuevo += Number(f['ARPU nuevo'])||0;
-    e.arpuPropio += Number(f['ARPU propio'])||0;
-    e.arpuRenovaciones += Number(f['ARPU renovaciones'])||0;
-    e.efectivo += Number(f['Efectivo'])||0;
-    e.tarjeta += Number(f['Tarjeta'])||0;
-    e.yubikeys += Number(f['Yubikeys'])||0;
+    e.pos += Number(f.crm?.pos)||0;
+    e.ren += Number(f.crm?.ren)||0;
+    e.campanas += Number(f.prospeccion?.campanas)||0;
+    e.resenas += Number(f.resenas)||0;
+    e.pospagoNuevo += Number(f.activos?.pospagoNuevo)||0;
+    e.pospagoPropio += Number(f.activos?.pospagoPropio)||0;
+    e.renovacion += Number(f.activos?.renovacion)||0;
+    e.accesorios += Number(f.activos?.accesorios)||0;
+    e.seguros += Number(f.activos?.seguros)||0;
+    e.arpuNuevo += Number(f.arpu?.equipoNuevo)||0;
+    e.arpuPropio += Number(f.arpu?.equipoPropio)||0;
+    e.arpuRenovaciones += Number(f.arpu?.renovaciones)||0;
+    e.efectivo += Number(f.caja?.efectivo)||0;
+    e.tarjeta += Number(f.caja?.tarjeta)||0;
   });
 
-  // Asegura que aparezcan también ejecutivos que solo mandaron mensajes (sin checklist guardado)
-  Object.keys(mensajesPorAttuid).forEach(attuid => {
+  // Asegura que aparezcan también quienes solo mandaron mensajes/llamadas (sin checklist guardado)
+  const todosLosAttuids = new Set([...Object.keys(mensajesPorAttuid), ...Object.keys(llamadasPorAttuid)]);
+  todosLosAttuids.forEach(attuid => {
     const yaExiste = Object.values(porEjecutivo).some(e => e.attuid === attuid);
     if (!yaExiste && attuid !== '(sin ATTUID)') {
-      porEjecutivo[`ATTUID ${attuid}`] = { attuid, pos:0, ren:0, campanas:0, llamadas:0, resenas:0,
+      porEjecutivo[`ATTUID ${attuid}`] = { attuid, pos:0, ren:0, campanas:0, resenas:0,
         pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0,
-        arpuNuevo:0, arpuPropio:0, arpuRenovaciones:0, efectivo:0, tarjeta:0, yubikeys:0, dias:0 };
+        arpuNuevo:0, arpuPropio:0, arpuRenovaciones:0, efectivo:0, tarjeta:0, dias:0 };
     }
   });
 
   const nombres = Object.keys(porEjecutivo).sort();
   const fmtM = n => n===0 ? '—' : `$${n.toLocaleString('es-MX',{minimumFractionDigits:2})}`;
 
-  let equipoTotals = { pos:0, ren:0, activos:0, mensajes:0, caja:0 };
+  let equipoTotals = { pos:0, ren:0, activos:0, mensajes:0, llamadas:0, caja:0 };
   const filasHTML = nombres.map(nombre => {
     const e = porEjecutivo[nombre];
     const mensajes = mensajesPorAttuid[e.attuid] || 0;
+    const llamadas = llamadasPorAttuid[e.attuid] || 0;
     const activos = e.pospagoNuevo + e.pospagoPropio + e.renovacion + e.accesorios + e.seguros;
     const caja = e.efectivo + e.tarjeta;
     equipoTotals.pos += e.pos; equipoTotals.ren += e.ren; equipoTotals.activos += activos;
-    equipoTotals.mensajes += mensajes; equipoTotals.caja += caja;
+    equipoTotals.mensajes += mensajes; equipoTotals.llamadas += llamadas; equipoTotals.caja += caja;
     return `<tr>
       <td class="day-col"><strong>${nombre}</strong><br><span style="font-size:10px;color:var(--text-light)">${e.attuid||'sin ATTUID'}</span></td>
       <td class="num-col">${e.pos+e.ren||'—'}</td>
       <td class="num-col">${mensajes||'—'}</td>
+      <td class="num-col">${llamadas||'—'}</td>
       <td class="num-col">${activos||'—'}</td>
       <td class="money-col">${fmtM(e.arpuNuevo+e.arpuPropio+e.arpuRenovaciones)}</td>
       <td class="money-col">${fmtM(caja)}</td>
@@ -708,15 +706,15 @@ async function renderVistaGerencial(panel) {
       <div class="stat-card"><div class="stat-num">${nombres.length}</div><div class="stat-label">Ejecutivos con actividad</div></div>
       <div class="stat-card"><div class="stat-num">${equipoTotals.pos+equipoTotals.ren}</div><div class="stat-label">Prospectos del equipo</div></div>
       <div class="stat-card"><div class="stat-num">${equipoTotals.mensajes}</div><div class="stat-label">Mensajes del equipo</div></div>
-      <div class="stat-card"><div class="stat-num">${equipoTotals.activos}</div><div class="stat-label">Activaciones del equipo</div></div>
+      <div class="stat-card"><div class="stat-num">${equipoTotals.llamadas}</div><div class="stat-label">Llamadas del equipo</div></div>
     </div>
     <div class="card-full">
       <div class="summary-section-title">🏢 Reporte del equipo — semana seleccionada</div>
       <table class="summary-table">
-        <thead><tr><th>Ejecutivo</th><th class="num-col">Prospectos</th><th class="num-col">Mensajes</th><th class="num-col">Activaciones</th><th class="num-col">ARPU</th><th class="num-col">Caja</th></tr></thead>
+        <thead><tr><th>Ejecutivo</th><th class="num-col">Prospectos</th><th class="num-col">Mensajes</th><th class="num-col">Llamadas</th><th class="num-col">Activaciones</th><th class="num-col">ARPU</th><th class="num-col">Caja</th></tr></thead>
         <tbody>${filasHTML}</tbody>
       </table>
-      <div class="helper" style="margin-top:10px;">Los datos de checklist se guardan cuando cada ejecutivo toca "Guardar reporte". Los mensajes se jalan directo del registro de envíos de Promos — esos sí son en tiempo real.</div>
+      <div class="helper" style="margin-top:10px;">Mensajes y llamadas son en tiempo real, directo de Firestore. Los demás datos se actualizan solos conforme cada ejecutivo va capturando su checklist (autoguardado, sin necesitar que le den "Guardar").</div>
     </div>`;
 }
 
