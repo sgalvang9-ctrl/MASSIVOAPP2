@@ -238,12 +238,7 @@
     <label>Lada país</label>
     <input type="text" id="cfgLada" value="52" placeholder="52">
 
-    <details style="margin-top:14px;">
-      <summary>⚙️ Reporte compartido con Promos y Checklist (opcional)</summary>
-      <div class="helper" style="margin-top:8px;">Pega la misma URL de Sheet que ya usas en Promos y Checklist — así tus llamadas también cuentan ahí, y el campo "Llamadas" del Checklist se llena solo.</div>
-      <label>URL Sheet compartido</label>
-      <input type="text" id="cfgSheetUrl" placeholder="https://script.google.com/...">
-    </details>
+    <div class="helper" style="margin-top:14px;">🔗 Tus llamadas y su resultado ya quedan registrados automáticamente y centralizados — tu gerente los ve en tiempo real, sin que tengas que configurar nada más.</div>
 
     <button class="btn btn-primary" id="btnGuardarConfig" style="margin-top:16px;">Guardar y continuar</button>
   </section>
@@ -375,7 +370,6 @@
       document.getElementById("cfgEjecutivo").value = config.ejecutivo || "";
       document.getElementById("cfgAttuid").value = config.attuid || "";
       document.getElementById("cfgLada").value = config.lada || "52";
-      document.getElementById("cfgSheetUrl").value = config.sheetUrl || "";
       showApp();
     }
   }
@@ -384,12 +378,11 @@
     var ejecutivo = document.getElementById("cfgEjecutivo").value.trim();
     var attuid = document.getElementById("cfgAttuid").value.trim();
     var lada = document.getElementById("cfgLada").value.trim() || "52";
-    var sheetUrl = document.getElementById("cfgSheetUrl").value.trim();
     if(!tienda || !ejecutivo){
       alert("Escribe al menos la tienda y tu nombre para continuar.");
       return;
     }
-    config = {tienda:tienda, ejecutivo:ejecutivo, attuid:attuid, lada:lada, sheetUrl:sheetUrl};
+    config = {tienda:tienda, ejecutivo:ejecutivo, attuid:attuid, lada:lada, sheetUrl: (config && config.sheetUrl) || ""};
     saveJSON(STORAGE_PREFIX + "config", config);
     showApp();
   });
@@ -648,7 +641,6 @@
         document.getElementById("cfgEjecutivo").value = config.ejecutivo;
         document.getElementById("cfgAttuid").value = config.attuid;
         document.getElementById("cfgLada").value = config.lada;
-        document.getElementById("cfgSheetUrl").value = config.sheetUrl;
         ["cfgTienda","cfgEjecutivo","cfgAttuid"].forEach(function(id){
           document.getElementById(id).setAttribute("readonly","readonly");
           document.getElementById(id).style.background = "#eef1f5";
