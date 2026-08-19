@@ -314,7 +314,7 @@
       <input type="date" id="semana-inicio" oninput="updateSemana()">
     </div>
     <div class="header-field">
-      <label>URL Sheet compartido (Promos + Checklist)</label>
+      <label>URL Sheet — respaldo opcional (ya no hace falta)</label>
       <input type="text" id="masivoapp-url" placeholder="https://script.google.com/...exec" oninput="saveChecklistConfig()" style="min-width:180px;">
     </div>
     <button class="role-badge role-exec" id="role-btn" onclick="toggleRole()" title="Cambiar perfil">
@@ -1040,15 +1040,14 @@ function loadChecklistConfig() {
 
 // ── MENSAJES Y LLAMADAS LIGADOS AL SHEET COMPARTIDO ──────────────
 async function refreshActividad(d, dayIdx, silencioso) {
-  const url = document.getElementById('masivoapp-url')?.value.trim();
   const attuid = document.getElementById('ejecutivo-attuid')?.value.trim();
   const inputMensajes = document.getElementById(`${d}-prosp-mensajes`);
   const inputLlamadas = document.getElementById(`${d}-prosp-llamadas`);
   const status = document.getElementById(`${d}-mensajes-status`);
   if (!inputMensajes) return;
 
-  if (!url || !attuid) {
-    if (status && !silencioso) status.textContent = 'Falta ATTUID o URL del Sheet en el encabezado.';
+  if (!window.LC || !attuid) {
+    if (status && !silencioso) status.textContent = 'Falta ATTUID o sesión de Firebase.';
     return;
   }
   const fecha = fechaDelDia(dayIdx);
@@ -1059,18 +1058,13 @@ async function refreshActividad(d, dayIdx, silencioso) {
 
   if (status) status.textContent = '⏳ Consultando...';
   try {
-    const resp = await fetch(`${url}?attuid=${encodeURIComponent(attuid)}&fecha=${fecha}`);
-    const data = await resp.json();
-    if (data && data.ok) {
-      inputMensajes.value = data.mensajes;
-      if (inputLlamadas) inputLlamadas.value = data.llamadas;
-      markDirty(dayIdx); renderSummary();
-      if (status) status.textContent = `✓ Actualizado (${fecha})`;
-    } else {
-      if (status) status.textContent = 'No se pudo leer el Sheet.';
-    }
+    const data = await LC.contarActividadDia(attuid, fecha);
+    inputMensajes.value = data.mensajes;
+    if (inputLlamadas) inputLlamadas.value = data.llamadas;
+    markDirty(dayIdx); renderSummary();
+    if (status) status.textContent = `✓ Actualizado (${fecha})`;
   } catch (err) {
-    if (status) status.textContent = 'Sin conexión con MasivoApp.';
+    if (status) status.textContent = 'No se pudo consultar Firestore.';
   }
 }
 
@@ -1565,7 +1559,7 @@ if (window.LC) {
       autoSetSemanaActual();
       const semana = document.getElementById('semana-inicio').value;
       if (semana) cargarSemanaDesdeFirestore(semana);
-      if (document.getElementById('masivoapp-url').value && perfil.attuid) {
+      if (perfil.attuid) {
         refreshActividad(DAYS[0], 0, true);
       }
     } else {
