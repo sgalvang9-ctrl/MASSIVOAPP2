@@ -29,6 +29,16 @@ function emailDeAttuid(attuid){
 }
 function slugify(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-"); }
 
+// Fecha de HOY en horario local (México), no UTC — toISOString() da la fecha
+// en UTC y puede adelantarse un día completo por la tarde/noche.
+function fechaLocal(d){
+  d = d || new Date();
+  var yyyy = d.getFullYear();
+  var mm = String(d.getMonth()+1).padStart(2,"0");
+  var dd = String(d.getDate()).padStart(2,"0");
+  return yyyy + "-" + mm + "-" + dd;
+}
+
 window.LC = {
   auth: LCAuth,
   db: LCDb,
@@ -109,7 +119,7 @@ window.LC = {
 
   // ---------- Promos: registro de envíos y estado de contactos ----------
   registrarEnvio: function(perfil){
-    var fecha = new Date().toISOString().slice(0,10);
+    var fecha = fechaLocal();
     return LCDb.collection("envios").add({
       tienda: perfil.tienda, ejecutivo: perfil.nombre, attuid: perfil.attuid,
       uid: LCAuth.currentUser ? LCAuth.currentUser.uid : null,
@@ -139,7 +149,7 @@ window.LC = {
 
   // ---------- Llamadas: registro de resultado ----------
   registrarLlamada: function(perfil, resultado){
-    var fecha = new Date().toISOString().slice(0,10);
+    var fecha = fechaLocal();
     return LCDb.collection("llamadas").add({
       tienda: perfil.tienda, ejecutivo: perfil.nombre, attuid: perfil.attuid,
       uid: LCAuth.currentUser ? LCAuth.currentUser.uid : null,
@@ -150,11 +160,11 @@ window.LC = {
 
   // ---------- conteo de actividad del día, por ATTUID ----------
   contarMensajesHoy: function(attuid){
-    var fecha = new Date().toISOString().slice(0,10);
+    var fecha = fechaLocal();
     return LCDb.collection("envios").where("attuid","==",attuid).where("fecha","==",fecha).get().then(function(snap){ return snap.size; });
   },
   contarLlamadasHoy: function(attuid){
-    var fecha = new Date().toISOString().slice(0,10);
+    var fecha = fechaLocal();
     return LCDb.collection("llamadas").where("attuid","==",attuid).where("fecha","==",fecha).get().then(function(snap){ return snap.size; });
   },
 
@@ -204,7 +214,7 @@ window.LC = {
     var inicio = new Date(semanaInicio + "T00:00:00");
     var fin = new Date(inicio); fin.setDate(fin.getDate() + 6);
     var fechaInicio = semanaInicio;
-    var fechaFin = fin.toISOString().slice(0,10);
+    var fechaFin = fechaLocal(fin);
 
     var mensajesQ = LCDb.collection("envios").where("fecha",">=",fechaInicio).where("fecha","<=",fechaFin).get();
     var llamadasQ = LCDb.collection("llamadas").where("fecha",">=",fechaInicio).where("fecha","<=",fechaFin).get();
