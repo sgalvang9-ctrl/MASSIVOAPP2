@@ -1058,6 +1058,8 @@
     if(window.LC){
       LC.registrarEnvio(config).catch(function(err){ alert("⚠️ Error guardando en Firestore (envío): " + (err && err.message ? err.message : err)); });
       LC.promosSetEstado(config.tienda, c.phone, "sent").catch(function(){});
+    }else{
+      alert("⚠️ Firebase no está disponible en esta pantalla (window.LC no existe). Este envío NO se guardó en Firestore.");
     }
 
     var intervaloSeg = 15; // fijo — no editable por el ejecutivo
@@ -1099,7 +1101,7 @@
     var blob = new Blob([JSON.stringify(backup, null, 2)], {type:"application/json"});
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
-    var fecha = new Date().toISOString().slice(0,10);
+    var fecha = (typeof fechaLocal === "function") ? fechaLocal() : new Date().toISOString().slice(0,10);
     a.href = url;
     a.download = "respaldo_" + (config.tienda||"tienda").replace(/\s+/g,"-") + "_" + fecha + ".json";
     a.click();
