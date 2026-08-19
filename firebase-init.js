@@ -158,6 +158,14 @@ window.LC = {
     return LCDb.collection("llamadas").where("attuid","==",attuid).where("fecha","==",fecha).get().then(function(snap){ return snap.size; });
   },
 
+  contarActividadDia: function(attuid, fecha){
+    var mensajesQ = LCDb.collection("envios").where("attuid","==",attuid).where("fecha","==",fecha).get();
+    var llamadasQ = LCDb.collection("llamadas").where("attuid","==",attuid).where("fecha","==",fecha).get();
+    return Promise.all([mensajesQ, llamadasQ]).then(function(results){
+      return { mensajes: results[0].size, llamadas: results[1].size };
+    });
+  },
+
   // ---------- Checklist: autoguardado por día en tiempo real ----------
   checklistGuardarDia: function(perfil, semana, dia, datosDia){
     var uid = LCAuth.currentUser ? LCAuth.currentUser.uid : null;
