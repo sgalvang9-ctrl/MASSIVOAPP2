@@ -1056,7 +1056,7 @@
     setSent(sent);
     sendToSheet();
     if(window.LC){
-      LC.registrarEnvio(config);
+      LC.registrarEnvio(config).catch(function(err){ alert("⚠️ Error guardando en Firestore (envío): " + (err && err.message ? err.message : err)); });
       LC.promosSetEstado(config.tienda, c.phone, "sent").catch(function(){});
     }
 
