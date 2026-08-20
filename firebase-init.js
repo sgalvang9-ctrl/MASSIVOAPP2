@@ -189,7 +189,7 @@ window.LC = {
     if(!uid) return Promise.resolve();
     var id = uid + "_" + semana + "_" + dia;
     var doc = Object.assign({}, datosDia, {
-      uid: uid, ejecutivo: perfil.nombre, attuid: perfil.attuid, tienda: perfil.tienda,
+      uid: uid, ejecutivo: (perfil && (perfil.nombre || perfil.ejecutivo)) || "", attuid: (perfil && perfil.attuid) || "", tienda: (perfil && perfil.tienda) || "",
       semana: semana, dia: dia,
       actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
     });
