@@ -1,4 +1,4 @@
-const CACHE_NAME = "leoncentro-v19";
+const CACHE_NAME = "leoncentro-v20";
 const CORE_ASSETS = [
   "./",
   "./index.html",
