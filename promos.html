@@ -249,6 +249,21 @@
 <div id="traza" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#111;color:#0f0;
   font:12px/1.5 monospace;padding:8px 10px;white-space:pre-wrap;border-bottom:2px solid #0f0;">traza…</div>
 <div style="height:46px"></div>
+<script>
+window.onerror = function(msg, src, line, col){
+  var el = document.getElementById("traza");
+  if(el){
+    el.style.background = "#600";
+    el.style.color = "#fff";
+    el.textContent = "❌ ERROR JS\n" + msg + "\nlínea " + line + ", col " + col + "\narchivo: " + (src||"").split("/").pop();
+  }
+  return false;
+};
+window.addEventListener("unhandledrejection", function(ev){
+  var el = document.getElementById("traza");
+  if(el) el.textContent += "\n⚠️ promesa rechazada: " + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason);
+});
+</script>
 
 <header class="top">
   <div class="brandrow"><span class="dot"></span> AT&amp;T · Prime MX</div>
@@ -366,17 +381,4 @@
     <div id="plantillaAutorizadaWrap" class="hidden">
       <label style="margin-top:16px;">🔒 Mensaje autorizado por tu gerente</label>
       <div class="helper" id="plantillaAutorizadaTexto" style="white-space:pre-wrap;"></div>
-      <button class="btn btn-cyan btn-sm" id="btnCopiarAutorizada" style="margin-top:8px;">📋 Copiar mensaje autorizado</button>
-    </div>
-
-    <div class="checkrow">
-      <input type="checkbox" id="chkConsentimiento">
-      <label style="margin:0;font-weight:400;">Confirmo que tengo consentimiento de estos clientes para contactarlos con fines mercadotécnicos y que consulté el <a href="#avisoPrivacidad" style="color:var(--navy);">aviso de privacidad</a>.</label>
-    </div>
-  </section>
-
-  <!-- PASO 3: ENVÍO -->
-  <section class="card">
-    <div class="step-eyebrow"><span class="n">3</span> Envío</div>
-    <h2>Envía de corrido, en tandas seguras</h2>
-    
+      <button class="btn btn-cyan btn-sm" id="btnCopiarAutorizada" style="margin-top:8px;">📋 Co
