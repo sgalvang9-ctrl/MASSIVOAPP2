@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es-MX">
 <head>
@@ -212,36 +211,27 @@
   <div class="brandrow"><span class="dot"></span> AT&amp;T · Prime MX</div>
   <h1>📞 Llamadas</h1>
   <p>Marca a tu lista de prospección y registra el resultado de cada llamada.</p>
-  <div class="storepill" id="storePill">⚙️ Configura tu tienda para empezar</div>
+  <div class="storepill" id="storePill">⏳ Cargando tu sesión…</div>
 </header>
 
 <main>
 
-  <!-- PASO 0: CONFIGURACIÓN -->
-  <section class="card" id="cardConfig">
-    <div class="step-eyebrow"><span class="n">0</span> Configuración</div>
-    <h2>¿Quién eres y dónde trabajas?</h2>
-    <p style="font-size:13px;color:var(--ink-dim);margin:0 0 4px;">Esto se guarda solo en este celular.</p>
-
-    <label>Tienda / punto de venta</label>
-    <input type="text" id="cfgTienda" placeholder="Ej. León Centro">
-
-    <div class="row2">
-      <div>
-        <label>Tu nombre</label>
-        <input type="text" id="cfgEjecutivo" placeholder="Ej. Sebastián Galván">
-      </div>
-      <div>
-        <label>ATTUID</label>
-        <input type="text" id="cfgAttuid" placeholder="Ej. SGALV1234">
-      </div>
-    </div>
+  <!-- AJUSTES — la identidad viene del login -->
+  <section class="card hidden" id="cardConfig">
+    <div class="step-eyebrow"><span class="n">⚙️</span> Ajustes</div>
+    <h2>Preferencias</h2>
+    <p style="font-size:13px;color:var(--ink-dim);margin:0 0 4px;">Tu nombre, tienda y ATTUID vienen de tu sesión.</p>
+    <div class="helper" id="identidadResumen" style="margin-top:12px;"></div>
     <label>Lada país</label>
     <input type="text" id="cfgLada" value="52" placeholder="52">
+    <button class="btn btn-primary" id="btnGuardarConfig" style="margin-top:16px;">Guardar</button>
+    <button class="btn btn-ghost" id="btnCerrarAjustes" style="margin-top:8px;">Cancelar</button>
+  </section>
 
-    <div class="helper" style="margin-top:14px;">🔗 Tus llamadas y su resultado ya quedan registrados automáticamente y centralizados — tu gerente los ve en tiempo real, sin que tengas que configurar nada más.</div>
-
-    <button class="btn btn-primary" id="btnGuardarConfig" style="margin-top:16px;">Guardar y continuar</button>
+  <section class="card hidden" id="cardSinSesion">
+    <div class="step-eyebrow" style="color:var(--bad);"><span class="n" style="background:var(--bad);">🔒</span> Sin sesión</div>
+    <h2>Inicia sesión para continuar</h2>
+    <p style="font-size:13.5px;color:var(--ink-dim);line-height:1.5;">Esta herramienta necesita tu sesión de León Centro. Entra desde la pantalla principal con tu ATTUID.</p>
   </section>
 
   <div id="restOfApp" class="hidden">
@@ -316,7 +306,7 @@
 <footer>
   🔒 Tus datos se procesan solo en este teléfono; nada se sube a un servidor salvo el conteo de resultados, si configuraste el Sheet compartido.<br>
   💾 El historial de llamadas se guarda solo en este navegador. Si cambias de equipo o limpias el caché, se pierde.<br><br>
-  <span style="opacity:.55">Versión: v16-fix</span>
+  <span style="opacity:.55">Versión: v20-login-unico</span>
 </footer>
 
 <script>
@@ -362,42 +352,44 @@
     return phone ? phone.slice(-2) : "?";
   }
 
-  // ---------- configuración ----------
+  // ---------- ajustes (identidad desde el login) ----------
   function loadGlobalConfig(){ return loadJSON(STORAGE_PREFIX + "config", null); }
-  function initConfigScreen(){
-    var saved = loadGlobalConfig();
-    if(saved){
-      config = saved;
-      document.getElementById("cfgTienda").value = config.tienda || "";
-      document.getElementById("cfgEjecutivo").value = config.ejecutivo || "";
-      document.getElementById("cfgAttuid").value = config.attuid || "";
-      document.getElementById("cfgLada").value = config.lada || "52";
-      showApp();
-    }
+
+  function abrirAjustes(){
+    document.getElementById("cfgLada").value = config.lada || "52";
+    document.getElementById("identidadResumen").innerHTML =
+      "<b>" + (config.ejecutivo || "") + "</b><br>" +
+      (config.tienda || "") + " · ATTUID " + (config.attuid || "");
+    document.getElementById("cardConfig").classList.remove("hidden");
+    document.getElementById("restOfApp").classList.add("hidden");
+  }
+  function cerrarAjustes(){
+    document.getElementById("cardConfig").classList.add("hidden");
+    document.getElementById("restOfApp").classList.remove("hidden");
   }
   document.getElementById("btnGuardarConfig").addEventListener("click", function(){
-    var tienda = document.getElementById("cfgTienda").value.trim();
-    var ejecutivo = document.getElementById("cfgEjecutivo").value.trim();
-    var attuid = document.getElementById("cfgAttuid").value.trim();
-    var lada = document.getElementById("cfgLada").value.trim() || "52";
-    if(!tienda || !ejecutivo){
-      alert("Escribe al menos la tienda y tu nombre para continuar.");
-      return;
-    }
-    config = {tienda:tienda, ejecutivo:ejecutivo, attuid:attuid, lada:lada, sheetUrl: (config && config.sheetUrl) || ""};
+    config.lada = document.getElementById("cfgLada").value.trim() || "52";
     saveJSON(STORAGE_PREFIX + "config", config);
-    showApp();
+    cerrarAjustes();
   });
+  document.getElementById("btnCerrarAjustes").addEventListener("click", cerrarAjustes);
+
   function showApp(){
     document.getElementById("storePill").textContent = "🏬 " + config.tienda + " · " + config.ejecutivo;
     document.getElementById("cardConfig").classList.add("hidden");
+    document.getElementById("cardSinSesion").classList.add("hidden");
     document.getElementById("restOfApp").classList.remove("hidden");
     renderQueue();
     updateStats();
   }
-  document.getElementById("storePill").addEventListener("click", function(){
-    document.getElementById("cardConfig").classList.remove("hidden");
+  function exigirLogin_(){
+    document.getElementById("cardConfig").classList.add("hidden");
     document.getElementById("restOfApp").classList.add("hidden");
+    document.getElementById("cardSinSesion").classList.remove("hidden");
+    document.getElementById("storePill").textContent = "🔒 Sin sesión";
+  }
+  document.getElementById("storePill").addEventListener("click", function(){
+    if(config && config.attuid) abrirAjustes();
   });
 
   // ---------- paso 1: archivo ----------
@@ -423,5 +415,4 @@
         var data = new Uint8Array(evt.target.result);
         var wb = XLSX.read(data, {type:"array"});
         var sheet = wb.Sheets[wb.SheetNames[0]];
-        var rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:""});
-        if(!rows || !rows.length) throw new Err
+        var rows = XLSX.utils.sheet_to_json(sheet, 
