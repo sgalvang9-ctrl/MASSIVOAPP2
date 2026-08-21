@@ -113,6 +113,10 @@ window.LC = {
       if(!user){ callback(null, null); return; }
       window.LC.getPerfil(user.uid).then(function(perfil){
         callback(user, perfil);
+      }).catch(function(err){
+        // si la lectura del perfil falla, avisamos en vez de dejar la pantalla colgada
+        console.error("No se pudo leer el perfil:", err);
+        callback(user, null);
       });
     });
   },
