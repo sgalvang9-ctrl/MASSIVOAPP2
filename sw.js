@@ -1,4 +1,4 @@
-const CACHE_NAME = "leoncentro-v24";
+const CACHE_NAME = "leoncentro-v25";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -11,80 +11,68 @@ const CORE_ASSETS = [
   "./icon-512.png"
 ];
 
-// Instalación resiliente: si un recurso falla, NO se cae toda la instalación.
-// (Antes usábamos cache.addAll, que falla completo si un solo archivo da 404 —
-// eso dejó service workers viejos atorados sirviendo copias viejas de la app.)
-self.addEventListener("install", function(event){
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache){
-      return Promise.all(
-        CORE_ASSETS.map(function(asset){
-          return cache.add(asset).catch(function(){ /* recurso opcional faltante: continuar */ });
-        })
-      );
-    })
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.all(CORE_ASSETS.map(async (asset) => {
+        try { await cache.add(asset); } catch (_) {}
+      }));
+    }).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-self.addEventListener("activate", function(event){
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then(function(keys){
-      return Promise.all(
-        keys.filter(function(k){ return k !== CACHE_NAME; })
-            .map(function(k){ return caches.delete(k); })
-      );
-    })
+    caches.keys().then((keys) => Promise.all(
+      keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+    )).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// HTML y navegación: SIEMPRE red primero (con fallback a caché si no hay internet).
-// Así, cada vez que subimos una versión nueva, se ve de inmediato — nunca más
-// una copia vieja atorada. Solo los recursos estáticos usan cache-first.
-self.addEventListener("fetch", function(event){
-  var req = event.request;
-  if(req.method !== "GET") return;
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
 
-  var url = new URL(req.url);
-  var isCore = url.origin === self.location.origin;
-  var esHTML = req.mode === "navigate" || (req.headers.get("accept") || "").indexOf("text/html") !== -1 || url.pathname.endsWith(".html") || url.pathname.endsWith("/");
-  var esJS = url.pathname.endsWith(".js");
+  const url = new URL(req.url);
+  const sameOrigin = url.origin === self.location.origin;
+  const isNavigation = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
+  const isAppScript = sameOrigin && url.pathname.endsWith(".js");
 
-  if(isCore && (esHTML || esJS)){
-    // network-first: siempre intenta traer lo más nuevo
+  // Never let the service worker manufacture a blank/old HTML page after a failed network request.
+  // HTML and app JS use network-first, with cache only as an offline fallback.
+  if (sameOrigin && (isNavigation || isAppScript)) {
     event.respondWith(
-      fetch(req).then(function(res){
-        var resClone = res.clone();
-        caches.open(CACHE_NAME).then(function(cache){ cache.put(req, resClone); });
-        return res;
-      }).catch(function(){
-        return caches.match(req).then(function(cached){
-          return cached || caches.match("./index.html");
-        });
-      })
+      fetch(req, { cache: "no-store" }).then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+        }
+        return response;
+      }).catch(() => caches.match(req).then((cached) => {
+        if (cached) return cached;
+        if (isNavigation) return caches.match("./index.html");
+        return new Response("Offline", { status: 503, headers: { "Content-Type": "text/plain" } });
+      }))
     );
-  }else if(isCore){
-    // estáticos propios (iconos, manifest): cache-first
-    event.respondWith(
-      caches.match(req).then(function(cached){
-        return cached || fetch(req).then(function(res){
-          var resClone = res.clone();
-          caches.open(CACHE_NAME).then(function(cache){ cache.put(req, resClone); });
-          return res;
-        });
-      })
-    );
-  }else{
-    // librerías externas: red primero, caché de respaldo
-    event.respondWith(
-      fetch(req).then(function(res){
-        var resClone = res.clone();
-        caches.open(CACHE_NAME).then(function(cache){ cache.put(req, resClone); });
-        return res;
-      }).catch(function(){
-        return caches.match(req);
-      })
-    );
+    return;
   }
+
+  // Static local assets: cache first, then network.
+  if (sameOrigin) {
+    event.respondWith(
+      caches.match(req).then((cached) => cached || fetch(req).then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+        }
+        return response;
+      }))
+    );
+    return;
+  }
+
+  // External Firebase/Google Fonts/CDN resources: network first, cached fallback.
+  event.respondWith(
+    fetch(req).catch(() => caches.match(req))
+  );
 });
