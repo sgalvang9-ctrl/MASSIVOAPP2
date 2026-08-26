@@ -29,6 +29,21 @@ function emailDeAttuid(attuid){
 }
 function slugify(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-"); }
 
+// Huella irreversible del teléfono: permite saber si un número ya está dado
+// de baja SIN guardar el número mismo en la base. No se puede "descifrar".
+// Se usa un salt fijo por tienda para que la huella no sea adivinable con
+// una simple tabla de los 10 dígitos posibles.
+function huellaTelefono(tienda, phone){
+  var base = "leoncentro::" + slugify(tienda) + "::" + String(phone||"").replace(/\D/g,"");
+  var h1 = 5381, h2 = 52711;
+  for(var i=0;i<base.length;i++){
+    var c = base.charCodeAt(i);
+    h1 = ((h1 << 5) + h1 + c) >>> 0;
+    h2 = ((h2 << 5) + h2 + (c * 31)) >>> 0;
+  }
+  return "h" + h1.toString(36) + h2.toString(36);
+}
+
 // Fecha de HOY en horario local (México), no UTC — toISOString() da la fecha
 // en UTC y puede adelantarse un día completo por la tarde/noche.
 function fechaLocal(d){
@@ -119,22 +134,60 @@ window.LC = {
   },
 
   promosSetEstado: function(tienda, phone, estado){
-    var id = slugify(tienda) + "__" + phone;
+    var id = slugify(tienda) + "__" + huellaTelefono(tienda, phone);
     return LCDb.collection("promosContactos").doc(id).set({
-      tienda: tienda, phone: phone, estado: estado,
+      tienda: tienda,
+      huella: huellaTelefono(tienda, phone),   // ya NO se guarda el número
+      estado: estado,
       ts: firebase.firestore.FieldValue.serverTimestamp()
     });
   },
+
   promosClearEstado: function(tienda, phone){
-    var id = slugify(tienda) + "__" + phone;
-    return LCDb.collection("promosContactos").doc(id).delete();
+    var nuevoId = slugify(tienda) + "__" + huellaTelefono(tienda, phone);
+    var viejoId = slugify(tienda) + "__" + phone;   // formato anterior, en claro
+    return Promise.all([
+      LCDb.collection("promosContactos").doc(nuevoId).delete().catch(function(){}),
+      LCDb.collection("promosContactos").doc(viejoId).delete().catch(function(){})
+    ]);
   },
+
+  // Devuelve un objeto indexado por huella. Entiende los registros viejos
+  // (que traían el teléfono en claro) y los convierte al vuelo.
   promosGetEstados: function(tienda){
     return LCDb.collection("promosContactos").where("tienda","==",tienda).get().then(function(snap){
       var out = {};
-      snap.forEach(function(doc){ out[doc.data().phone] = doc.data(); });
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var huella = d.huella || (d.phone ? huellaTelefono(tienda, d.phone) : null);
+        if(!huella) return;
+        out[huella] = { estado: d.estado, ts: d.ts, legacyId: d.huella ? null : doc.id };
+      });
       return out;
     });
+  },
+
+  huellaTelefono: function(tienda, phone){ return huellaTelefono(tienda, phone); },
+
+  // Migración silenciosa: reescribe en formato cifrado los registros viejos
+  // que todavía traen el teléfono en claro, y borra el original.
+  promosMigrarViejos: function(tienda){
+    return LCDb.collection("promosContactos").where("tienda","==",tienda).get().then(function(snap){
+      var pendientes = [];
+      snap.forEach(function(doc){
+        var d = doc.data();
+        if(d.huella || !d.phone) return;   // ya está migrado
+        var h = huellaTelefono(tienda, d.phone);
+        pendientes.push(
+          LCDb.collection("promosContactos").doc(slugify(tienda) + "__" + h).set({
+            tienda: tienda, huella: h, estado: d.estado, ts: d.ts || firebase.firestore.FieldValue.serverTimestamp()
+          }).then(function(){
+            return LCDb.collection("promosContactos").doc(doc.id).delete();
+          }).catch(function(){})
+        );
+      });
+      return Promise.all(pendientes).then(function(){ return pendientes.length; });
+    }).catch(function(){ return 0; });
   },
 
   // ---------- Llamadas: registro de resultado ----------

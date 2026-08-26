@@ -440,7 +440,7 @@
 </main>
 
 <footer id="avisoPrivacidad">
-  🔒 Tus datos se procesan solo en este teléfono; nada se sube a un servidor.<br>
+  🔒 <b>Qué sale de este teléfono y qué no.</b> Los números y nombres de tu lista se procesan únicamente aquí y <b>nunca se suben</b>. Lo único que se comparte con tu tienda es: el conteo de mensajes que envías (con tu ATTUID, sin datos del cliente) y las marcas de baja o "no existe", guardadas como una huella cifrada que <b>no permite reconstruir el número</b> — sirve solo para que ningún compañero le vuelva a escribir a quien pidió no ser contactado.<br>
   <b>Aviso de privacidad simplificado:</b> los números y nombres que subes se usan únicamente para el envío manual de promociones AT&T por WhatsApp por parte del ejecutivo identificado arriba. No se comparten con terceros. El titular puede solicitar no ser contactado de nuevo respondiendo "BAJA" o pidiéndolo directamente al ejecutivo; esa solicitud debe marcarse en el Paso 3.<br><br>
   💾 El historial de envíos y la lista de bajas se guardan solo en este navegador. Si cambias de equipo o limpias el caché, se pierden — considera exportar tu lista de bajas periódicamente.<br><br>
   <span style="opacity:.55">Versión: v27-final</span>
@@ -456,6 +456,7 @@
   var STORAGE_PREFIX = "masivo_v2_";
   var config = {};
   var contacts = []; // {name, phone, raw}
+  var estadosRemotos = {};   // bajas/no-existe del equipo, indexadas por huella
   var cleanStats = {validos:0, duplicados:0, invalidos:0, enBaja:0, enEnfriamiento:0, procesadoEn:null};
   var filtroActual = "pendientes";
   var nextSendTs = 0;
@@ -628,6 +629,13 @@
       var suppressed = loadJSON(nsKey("suppressed"), {});
       var noExisteList = loadJSON(nsKey("noexiste"), {});
       var sentHistory = getSent();
+
+      // aplicar lo que el equipo ya marcó en otros dispositivos
+      function estadoRemotoDe_(phone){
+        if(!window.LC || !LC.huellaTelefono) return null;
+        var e = estadosRemotos[LC.huellaTelefono(config.tienda, phone)];
+        return e ? e.estado : null;
+      }
       var cooldownDays = parseFloat(document.getElementById("cfgEnfriamiento").value) || 0;
       var cooldownMs = cooldownDays * 86400000;
     var now = Date.now();
@@ -641,6 +649,9 @@
       var rawName = colNameIdx >= 0 ? row[colNameIdx] : "";
       var phone = normalizePhone(rawPhone);
       if(!phone){ invalidos++; continue; }
+      var remoto = estadoRemotoDe_(phone);
+      if(remoto === "baja"){ suppressed[phone] = {ts: Date.now()}; }
+      if(remoto === "noExiste"){ noExisteList[phone] = {ts: Date.now()}; }
       if(suppressed[phone]){ enBaja++; continue; }
       if(noExisteList[phone]){ enNoExiste++; continue; }
       if(seen[phone]){ duplicados++; continue; }
@@ -651,6 +662,8 @@
       validos.push({phone: phone, name: (rawName || "").toString().trim() || null});
     }
 
+    setSuppressed(suppressed);
+    setNoExiste(noExisteList);
     contacts = validos;
     cleanStats = {validos: validos.length, duplicados: duplicados, invalidos: invalidos, enBaja: enBaja, enEnfriamiento: enEnfriamiento, enNoExiste: enNoExiste, procesadoEn: Date.now()};
     document.getElementById("repValidos").textContent = validos.length;
@@ -671,20 +684,12 @@
       var textoOriginal = procesarBtn.textContent;
       procesarBtn.textContent = "Sincronizando…";
       LC.promosGetEstados(config.tienda).then(function(estados){
-        var suppressed = loadJSON(nsKey("suppressed"), {});
-        var noExisteList = loadJSON(nsKey("noexiste"), {});
-        var sent = getSent();
-        Object.keys(estados).forEach(function(phone){
-          var e = estados[phone];
-          var ts = (e.ts && e.ts.toMillis) ? e.ts.toMillis() : Date.now();
-          if(e.estado === "baja") suppressed[phone] = {ts: ts};
-          else if(e.estado === "noExiste") noExisteList[phone] = {ts: ts};
-          else if(e.estado === "sent") sent[phone] = {ts: ts};
-        });
-        setSuppressed(suppressed);
-        setNoExiste(noExisteList);
-        setSent(sent);
-      }).catch(function(){ /* si falla la sincronización, seguimos con lo local */ })
+        // los estados vienen indexados por huella; se cruzan contra los
+        // números de ESTA lista, que sí tenemos en el teléfono.
+        estadosRemotos = estados || {};
+        // migración silenciosa de registros viejos (teléfono en claro)
+        LC.promosMigrarViejos(config.tienda);
+      }).catch(function(){ estadosRemotos = {}; })
       .finally(function(){
         procesarBtn.disabled = false;
         procesarBtn.textContent = textoOriginal;
