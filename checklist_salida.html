@@ -282,6 +282,7 @@
   /* NAME GATE OVERLAY */
   #name-gate { position: fixed; inset: 0; background: rgba(0,30,60,0.75); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
   #name-gate.hidden { display: none; }
+  .hidden { display: none !important; }
   .gate-box { background: white; border-radius: 14px; padding: 32px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
   .gate-box .gate-icon { font-size: 32px; margin-bottom: 8px; }
   .gate-box h2 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
@@ -326,7 +327,7 @@
       <label>URL Sheet — respaldo opcional (ya no hace falta)</label>
       <input type="text" id="masivoapp-url" placeholder="https://script.google.com/...exec" oninput="saveChecklistConfig()" style="min-width:180px;">
     </div>
-    <button class="role-badge role-exec" id="role-btn" onclick="toggleRole()" title="Cambiar perfil">
+    <button class="role-badge role-exec hidden" id="role-btn" onclick="toggleRole()" title="Cambiar perfil">
       <span id="role-icon">👤</span> <span id="role-label">Ejecutivo</span>
     </button>
   </div>
@@ -384,7 +385,15 @@ function updateMetaSemana(key, value) {
 }
 
 // ── ROLE ────────────────────────────────────────────────────────
+function esGerente() {
+  return !!(window.LC_PERFIL && window.LC_PERFIL.rol === 'gerente');
+}
 function toggleRole() {
+  // candado real: sin rol de gerente en Firebase, no se entra a la vista del equipo
+  if (!esGerente()) {
+    alert('Esta vista es solo para gerentes.');
+    return;
+  }
   currentRole = currentRole === 'exec' ? 'mgr' : 'exec';
   const btn = document.getElementById('role-btn');
   const icon = document.getElementById('role-icon');
@@ -617,6 +626,10 @@ function markDirty(dayIdx) {
 function nv(id) { const el = document.getElementById(id); return el ? (parseFloat(el.value)||0) : 0; }
 
 async function renderVistaGerencial(panel) {
+  if (!esGerente()) {
+    panel.innerHTML = `<div class="mgr-notice"><strong>🔒 Solo gerentes</strong>Esta vista muestra los datos de todo el equipo.</div>`;
+    return;
+  }
   const semana = document.getElementById('semana-inicio')?.value;
 
   if (!window.LC) {
@@ -1541,6 +1554,9 @@ if (window.LC) {
     if (user && perfil) {
       loadChecklistConfig(); // rellena masivoapp-url si ya estaba guardada
       window.LC_PERFIL = perfil;
+      if (perfil.rol === 'gerente') {
+        document.getElementById('role-btn').classList.remove('hidden');
+      }
       document.getElementById('ejecutivo-name').value = perfil.nombre;
       document.getElementById('ejecutivo-attuid').value = perfil.attuid;
       ['ejecutivo-name', 'ejecutivo-attuid'].forEach(id => {
