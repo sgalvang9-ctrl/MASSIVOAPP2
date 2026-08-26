@@ -16,7 +16,15 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script src="firebase-init.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- SheetJS 0.20.3 desde su CDN oficial (0.18.5 tenía vulnerabilidades conocidas).
+     Si por alguna razón no cargara, se usa la versión anterior como respaldo
+     para que la app nunca se quede sin poder leer archivos. -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+if (typeof XLSX === "undefined") {
+  document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -345,6 +353,13 @@
     return s;
   }
 
+  // Neutraliza cualquier código que venga dentro de un nombre del Excel
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+
   function getInitials(name, phone){
     if(name){
       var parts = name.trim().split(/\s+/);
@@ -360,8 +375,8 @@
   function abrirAjustes(){
     document.getElementById("cfgLada").value = config.lada || "52";
     document.getElementById("identidadResumen").innerHTML =
-      "<b>" + (config.ejecutivo || "") + "</b><br>" +
-      (config.tienda || "") + " · ATTUID " + (config.attuid || "");
+      "<b>" + esc(config.ejecutivo || "") + "</b><br>" +
+      esc(config.tienda || "") + " · ATTUID " + esc(config.attuid || "");
     document.getElementById("cardConfig").classList.remove("hidden");
     document.getElementById("restOfApp").classList.add("hidden");
   }
@@ -555,10 +570,10 @@
       var registro = llamadas[c.phone];
 
       item.innerHTML =
-        '<div class="avatar">' + getInitials(c.name, c.phone) + '</div>' +
+        '<div class="avatar">' + esc(getInitials(c.name, c.phone)) + '</div>' +
         '<div class="info">' +
-          '<div class="nm">' + (c.name || "Sin nombre") + '</div>' +
-          '<div class="ph">' + c.phone + ' · ' + badgeFor(registro && registro.resultado) + '</div>' +
+          '<div class="nm">' + esc(c.name || "Sin nombre") + '</div>' +
+          '<div class="ph">' + esc(c.phone) + ' · ' + badgeFor(registro && registro.resultado) + '</div>' +
         '</div>' +
         '<div class="acts"></div>';
 

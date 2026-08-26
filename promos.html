@@ -16,7 +16,15 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script src="firebase-init.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- SheetJS 0.20.3 desde su CDN oficial (0.18.5 tenía vulnerabilidades conocidas).
+     Si por alguna razón no cargara, se usa la versión anterior como respaldo
+     para que la app nunca se quede sin poder leer archivos. -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+if (typeof XLSX === "undefined") {
+  document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
+}
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -498,8 +506,8 @@
   function abrirAjustes(){
     document.getElementById("cfgLada").value = config.lada || "52";
     document.getElementById("identidadResumen").innerHTML =
-      "<b>" + (config.ejecutivo || "") + "</b><br>" +
-      (config.tienda || "") + " · ATTUID " + (config.attuid || "");
+      "<b>" + esc(config.ejecutivo || "") + "</b><br>" +
+      esc(config.tienda || "") + " · ATTUID " + esc(config.attuid || "");
     document.getElementById("cardConfig").classList.remove("hidden");
     document.getElementById("restOfApp").classList.add("hidden");
   }
@@ -728,11 +736,11 @@
       var f = new Date(e.ts).toLocaleString("es-MX");
       if(e.evento){
         return "<div style='padding:6px 0;border-bottom:1px solid var(--line);color:var(--bad);font-weight:700;'>" +
-          "⚠️ " + f + " — " + e.evento + " (" + e.ejecutivo + ")" +
+          "⚠️ " + esc(f) + " — " + esc(e.evento) + " (" + esc(e.ejecutivo) + ")" +
           "</div>";
       }
       return "<div style='padding:6px 0;border-bottom:1px solid var(--line);'>" +
-        "<b>" + f + "</b> — " + e.ejecutivo + "<br>" +
+        "<b>" + esc(f) + "</b> — " + esc(e.ejecutivo) + "<br>" +
         e.validos + " válidos · " + e.duplicados + " duplicados · " + e.invalidos + " inválidos · " +
         e.enBaja + " en bajas · " + e.enEnfriamiento + " en enfriamiento · " + (e.enNoExiste||0) + " no existen" +
         "</div>";
@@ -798,6 +806,13 @@
     });
   });
 
+  // Neutraliza cualquier código que venga dentro de un nombre del Excel
+  function esc(v){
+    return String(v == null ? "" : v)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+
   function getInitials(name, phone){
     if(name){
       var parts = name.trim().split(/\s+/);
@@ -850,10 +865,10 @@
       else status = "<span class=\"badge badge-warn\">⏳ Pendiente</span>";
 
       item.innerHTML =
-        '<div class="avatar">' + getInitials(c.name, c.phone) + '</div>' +
+        '<div class="avatar">' + esc(getInitials(c.name, c.phone)) + '</div>' +
         '<div class="info">' +
-          '<div class="nm">' + (c.name || "Sin nombre") + '</div>' +
-          '<div class="ph">' + c.phone + ' · ' + status + '</div>' +
+          '<div class="nm">' + esc(c.name || "Sin nombre") + '</div>' +
+          '<div class="ph">' + esc(c.phone) + ' · ' + status + '</div>' +
         '</div>' +
         '<div class="acts"></div>';
 
