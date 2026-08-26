@@ -137,6 +137,16 @@
     padding:8px 12px;background:#081a33;color:#fff;font-size:11.5px;flex:none;
   }
   .userbar .who{opacity:.85;}
+  .upd{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 14px;background:linear-gradient(135deg,#0b2545,#123a6b);color:#fff;
+    font-size:12.5px;font-weight:600;flex:none;border-bottom:1px solid rgba(255,255,255,.12);
+    animation:bajar .3s ease both;}
+  @keyframes bajar{from{transform:translateY(-100%);opacity:0;}to{transform:none;opacity:1;}}
+  .updtxt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .updbtn{flex:none;background:linear-gradient(135deg,#4dcdf7,#00b6f1);color:#042a3d;border:none;
+    border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .updbtn:active{transform:scale(.97);}
+  .verchip{font-size:9.5px;opacity:.45;margin-left:8px;font-family:ui-monospace,monospace;}
   .userbar button{
     background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;
     border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer;
@@ -165,8 +175,13 @@
 <!-- APP (solo visible con sesión activa) -->
 <div class="hidden" id="appShell" style="display:flex;flex-direction:column;height:100%;">
 
+<div id="avisoUpdate" class="upd hidden">
+  <span class="updtxt">✨ Hay una versión nueva de la app</span>
+  <button id="btnActualizar" class="updbtn">Actualizar</button>
+</div>
+
 <div class="userbar">
-  <span class="who" id="whoLabel">—</span>
+  <span class="who" id="whoLabel">—</span><span class="verchip" id="verChip"></span>
   <button onclick="cerrarSesion()">Cerrar sesión</button>
 </div>
 
@@ -279,9 +294,52 @@
     }
   }
 
+  // ---------- detección de versión nueva ----------
+  var APP_VERSION = "v32";
+  document.getElementById("verChip").textContent = APP_VERSION;
+
+  function mostrarAvisoUpdate(reg){
+    var aviso = document.getElementById("avisoUpdate");
+    aviso.classList.remove("hidden");
+    document.getElementById("btnActualizar").onclick = function(){
+      this.textContent = "Actualizando…";
+      this.disabled = true;
+      if(reg && reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"});
+      setTimeout(function(){ window.location.reload(true); }, 600);
+    };
+  }
+
   if("serviceWorker" in navigator){
     window.addEventListener("load", function(){
-      navigator.serviceWorker.register("sw.js").catch(function(){});
+      navigator.serviceWorker.register("sw.js").then(function(reg){
+
+        // ya hay una versión nueva esperando
+        if(reg.waiting) mostrarAvisoUpdate(reg);
+
+        // llega una versión nueva mientras la app está abierta
+        reg.addEventListener("updatefound", function(){
+          var nuevo = reg.installing;
+          if(!nuevo) return;
+          nuevo.addEventListener("statechange", function(){
+            if(nuevo.state === "installed" && navigator.serviceWorker.controller){
+              mostrarAvisoUpdate(reg);
+            }
+          });
+        });
+
+        // revisar si hay algo nuevo al abrir y cada 30 minutos
+        reg.update();
+        setInterval(function(){ reg.update(); }, 30 * 60 * 1000);
+
+      }).catch(function(){});
+
+      // cuando el service worker nuevo toma el control, recargar una vez
+      var recargando = false;
+      navigator.serviceWorker.addEventListener("controllerchange", function(){
+        if(recargando) return;
+        recargando = true;
+        window.location.reload();
+      });
     });
   }
 </script>

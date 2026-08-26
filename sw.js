@@ -1,4 +1,4 @@
-const CACHE_NAME = "leoncentro-v31";
+const CACHE_NAME = "leoncentro-v32";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -25,7 +25,11 @@ self.addEventListener("install", function(event){
       );
     })
   );
-  self.skipWaiting();
+});
+
+// Permite que la app le pida activarse de inmediato (botón "Actualizar")
+self.addEventListener("message", function(ev){
+  if(ev.data && ev.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", function(event){
