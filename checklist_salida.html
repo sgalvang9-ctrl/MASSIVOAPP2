@@ -323,10 +323,6 @@
       <label>Semana del</label>
       <input type="date" id="semana-inicio" oninput="updateSemana()">
     </div>
-    <div class="header-field">
-      <label>URL Sheet — respaldo opcional (ya no hace falta)</label>
-      <input type="text" id="masivoapp-url" placeholder="https://script.google.com/...exec" oninput="saveChecklistConfig()" style="min-width:180px;">
-    </div>
     <button class="role-badge role-exec hidden" id="role-btn" onclick="toggleRole()" title="Cambiar perfil">
       <span id="role-icon">👤</span> <span id="role-label">Ejecutivo</span>
     </button>
@@ -1045,7 +1041,7 @@ function saveChecklistConfig() {
   const cfg = {
     ejecutivo: document.getElementById('ejecutivo-name').value || '',
     attuid: document.getElementById('ejecutivo-attuid').value || '',
-    masivoappUrl: document.getElementById('masivoapp-url').value || ''
+    masivoappUrl: ''
   };
   try { localStorage.setItem(CHECKLIST_CONFIG_KEY, JSON.stringify(cfg)); } catch(e) {}
 }
@@ -1056,7 +1052,6 @@ function loadChecklistConfig() {
     const cfg = JSON.parse(raw);
     if (cfg.ejecutivo) { document.getElementById('ejecutivo-name').value = cfg.ejecutivo; updateHeader(); }
     if (cfg.attuid) document.getElementById('ejecutivo-attuid').value = cfg.attuid;
-    if (cfg.masivoappUrl) document.getElementById('masivoapp-url').value = cfg.masivoappUrl;
   } catch(e) {}
 }
 
@@ -1238,35 +1233,35 @@ async function saveData() {
     payload.dias[d] = recolectarDatosDia(d);
   });
 
-  const sheetsUrl = document.getElementById('masivoapp-url')?.value.trim();
-
-  // Si no hay URL configurada, guardar solo localmente
-  if (!sheetsUrl) {
-    btn.textContent = '✓ Guardado (local)'; btn.style.background = '#0090C4';
-    toast.textContent = '✓ Guardado localmente — pega la URL de reporte en el encabezado para sincronizar';
+  // Los datos ya viven en Firestore por el autoguardado — este botón solo
+  // confirma el cierre del día y fuerza un último guardado por si acaso.
+  if (window.LC && window.LC_PERFIL) {
+    btn.textContent = '⏳ Guardando…'; btn.disabled = true;
+    const semanaSel = document.getElementById('semana-inicio').value;
+    Promise.all(DAYS.map(d => LC.checklistGuardarDia(window.LC_PERFIL, semanaSel, d, recolectarDatosDia(d))))
+      .then(() => {
+        btn.textContent = '✓ Guardado';
+        btn.style.background = 'linear-gradient(135deg,#12a058,#5fd39a)';
+        toast.textContent = '✓ Tu semana quedó guardada';
+        toast.classList.add('show');
+      })
+      .catch(() => {
+        toast.textContent = '⚠️ No se pudo guardar — revisa tu conexión';
+        toast.classList.add('show');
+      })
+      .finally(() => {
+        setTimeout(() => {
+          btn.textContent = 'Guardar reporte'; btn.style.background = ''; btn.disabled = false;
+          toast.classList.remove('show'); toast.textContent = '✓ Reporte guardado';
+        }, 2800);
+      });
+  } else {
+    toast.textContent = '⚠️ Sin sesión — no se pudo guardar';
     toast.classList.add('show');
-    setTimeout(() => { btn.textContent = 'Guardar reporte'; btn.style.background = ''; toast.classList.remove('show'); toast.textContent = '✓ Reporte guardado'; }, 3500);
-    return;
-  }
-
-  // Enviar a Google Sheets
-  btn.textContent = '⏳ Enviando...'; btn.disabled = true;
-  try {
-    await fetch(sheetsUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    btn.textContent = '✓ Sincronizado';  btn.style.background = '#0090C4';
-    toast.textContent = '✓ Datos enviados a Google Sheets';
-    toast.classList.add('show');
-    setTimeout(() => { btn.textContent = 'Guardar reporte'; btn.style.background = ''; btn.disabled = false; toast.classList.remove('show'); toast.textContent = '✓ Reporte guardado'; }, 3000);
-  } catch (err) {
-    btn.textContent = 'Guardar reporte'; btn.disabled = false;
-    alert('No se pudo conectar a Google Sheets. Verifica la URL en la configuración.');
+    setTimeout(() => { toast.classList.remove('show'); }, 2800);
   }
 }
+
 function clearDay() {
   const d = DAYS[currentDay];
   if (!confirm(`¿Limpiar todos los datos del ${d}?`)) return;
@@ -1552,7 +1547,6 @@ window.LC_PERFIL = null;
 if (window.LC) {
   LC.onAuthChange(function(user, perfil) {
     if (user && perfil) {
-      loadChecklistConfig(); // rellena masivoapp-url si ya estaba guardada
       window.LC_PERFIL = perfil;
       if (perfil.rol === 'gerente') {
         document.getElementById('role-btn').classList.remove('hidden');
