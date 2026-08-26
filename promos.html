@@ -246,24 +246,6 @@
 </style>
 </head>
 <body>
-<div id="traza" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#111;color:#0f0;
-  font:12px/1.5 monospace;padding:8px 10px;white-space:pre-wrap;border-bottom:2px solid #0f0;">traza…</div>
-<div style="height:46px"></div>
-<script>
-window.onerror = function(msg, src, line, col){
-  var el = document.getElementById("traza");
-  if(el){
-    el.style.background = "#600";
-    el.style.color = "#fff";
-    el.textContent = "❌ ERROR JS\n" + msg + "\nlínea " + line + ", col " + col + "\narchivo: " + (src||"").split("/").pop();
-  }
-  return false;
-};
-window.addEventListener("unhandledrejection", function(ev){
-  var el = document.getElementById("traza");
-  if(el) el.textContent += "\n⚠️ promesa rechazada: " + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason);
-});
-</script>
 
 <header class="top">
   <div class="brandrow"><span class="dot"></span> AT&amp;T · Prime MX</div>
@@ -461,16 +443,13 @@ window.addEventListener("unhandledrejection", function(ev){
   🔒 Tus datos se procesan solo en este teléfono; nada se sube a un servidor.<br>
   <b>Aviso de privacidad simplificado:</b> los números y nombres que subes se usan únicamente para el envío manual de promociones AT&T por WhatsApp por parte del ejecutivo identificado arriba. No se comparten con terceros. El titular puede solicitar no ser contactado de nuevo respondiendo "BAJA" o pidiéndolo directamente al ejecutivo; esa solicitud debe marcarse en el Paso 3.<br><br>
   💾 El historial de envíos y la lista de bajas se guardan solo en este navegador. Si cambias de equipo o limpias el caché, se pierden — considera exportar tu lista de bajas periódicamente.<br><br>
-  <span style="opacity:.55">Versión: v25-failopen</span>
+  <span style="opacity:.55">Versión: v27-final</span>
 </footer>
 
 <script>
 (function(){
   "use strict";
-  function T(msg){
-    var el = document.getElementById("traza");
-    if(el) el.textContent = (el.textContent === "traza…" ? "" : el.textContent) + msg + " · ";
-  }
+  function T(){}
   T("A");
 
   // ---------- estado ----------
@@ -1026,12 +1005,8 @@ window.addEventListener("unhandledrejection", function(ev){
     setSent(sent);
     sendToSheet();
     if(window.LC){
-      LC.registrarEnvio(config).then(function(){
-        alert("✅ DIAGNÓSTICO: el envío SÍ se guardó en Firestore.");
-      }).catch(function(err){ alert("⚠️ Error guardando en Firestore (envío): " + (err && err.message ? err.message : err)); });
+      LC.registrarEnvio(config).catch(function(err){ alert("⚠️ Error guardando en Firestore (envío): " + (err && err.message ? err.message : err)); });
       LC.promosSetEstado(config.tienda, c.phone, "sent").catch(function(){});
-    }else{
-      alert("⚠️ Firebase no está disponible en esta pantalla (window.LC no existe). Este envío NO se guardó en Firestore.");
     }
 
     var intervaloSeg = 15; // fijo — no editable por el ejecutivo

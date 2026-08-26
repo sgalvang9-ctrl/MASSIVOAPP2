@@ -206,17 +206,6 @@
 </style>
 </head>
 <body>
-<div id="traza" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#111;color:#0f0;
-  font:12px/1.4 monospace;padding:6px 10px;border-bottom:2px solid #0f0;">traza…</div>
-<div style="height:34px"></div>
-<script>
-window.onerror = function(msg, src, line){
-  var el = document.getElementById("traza");
-  if(el){ el.style.background="#600"; el.style.color="#fff";
-    el.textContent = "❌ ERROR: " + msg + " · línea " + line; }
-  return false;
-};
-</script>
 
 <header class="top">
   <div class="brandrow"><span class="dot"></span> AT&amp;T · Prime MX</div>
@@ -317,16 +306,13 @@ window.onerror = function(msg, src, line){
 <footer>
   🔒 Tus datos se procesan solo en este teléfono; nada se sube a un servidor salvo el conteo de resultados, si configuraste el Sheet compartido.<br>
   💾 El historial de llamadas se guarda solo en este navegador. Si cambias de equipo o limpias el caché, se pierde.<br><br>
-  <span style="opacity:.55">Versión: v25-failopen</span>
+  <span style="opacity:.55">Versión: v27-final</span>
 </footer>
 
 <script>
 (function(){
   "use strict";
-  function T(msg){
-    var el = document.getElementById("traza");
-    if(el) el.textContent = (el.textContent === "traza…" ? "" : el.textContent) + msg + " · ";
-  }
+  function T(){}
   T("A");
 
   var STORAGE_PREFIX = "llamadas_v1_";
@@ -598,11 +584,9 @@ window.onerror = function(msg, src, line){
           setLlamadas(l);
           sendToSheet(pair[0]);
           if(window.LC){
-            LC.registrarLlamada(config, pair[0]).then(function(){
-              alert("✅ DIAGNÓSTICO: la llamada SÍ se guardó en Firestore.");
-            }).catch(function(err){ alert("⚠️ Error guardando en Firestore (llamada): " + (err && err.message ? err.message : err)); });
-          }else{
-            alert("⚠️ Firebase no está disponible en esta pantalla (window.LC no existe). Esta llamada NO se guardó en Firestore.");
+            LC.registrarLlamada(config, pair[0]).catch(function(err){
+              alert("⚠️ No se pudo registrar la llamada: " + (err && err.message ? err.message : err));
+            });
           }
           renderQueue();
         });

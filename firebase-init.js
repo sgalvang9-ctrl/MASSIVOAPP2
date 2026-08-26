@@ -43,28 +43,11 @@ window.LC = {
   auth: LCAuth,
   db: LCDb,
 
-  // Autorregistro (opcional) — un ejecutivo crea su propia cuenta.
-  // SOLO funciona si su ATTUID ya está en la lista blanca.
-  signUp: function(nombre, attuid, tienda, password){
-    var attuidUpper = (attuid || "").trim().toUpperCase();
-    if(!attuidUpper) return Promise.reject(new Error("Escribe tu ATTUID."));
-    var email = emailDeAttuid(attuidUpper);
-
-    return LCDb.collection("attuidsAutorizados").doc(attuidUpper).get().then(function(wDoc){
-      if(!wDoc.exists || wDoc.data().activo !== true){
-        throw new Error("Tu ATTUID no está autorizado todavía. Pídele a tu gerente que te agregue en Firestore.");
-      }
-      var rol = wDoc.data().rol || "ejecutivo";
-      return LCAuth.createUserWithEmailAndPassword(email, password).then(function(cred){
-        return LCDb.collection("usuarios").doc(cred.user.uid).set({
-          nombre: nombre,
-          attuid: attuidUpper,
-          tienda: tienda,
-          rol: rol,
-          creadoEn: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(function(){ return cred.user; });
-      });
-    });
+  // El autorregistro está deshabilitado a propósito: las cuentas las crea
+  // el gerente desde la consola de Firebase. Así nadie puede apropiarse de
+  // un ATTUID ajeno registrándolo antes que su dueño.
+  signUp: function(){
+    return Promise.reject(new Error("El registro está deshabilitado. Pide tu cuenta a tu gerente."));
   },
 
   // Login normal — ATTUID + contraseña. Si es la primera vez que esa

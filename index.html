@@ -149,12 +149,7 @@
 <div class="authScreen" id="authScreen">
   <div class="authCard">
     <h1>León Centro — Herramientas</h1>
-    <p class="sub">Inicia sesión con tu cuenta de equipo.</p>
-
-    <div class="authTabs">
-      <button class="active" id="authTabLogin" onclick="switchAuthTab('login')">Iniciar sesión</button>
-      <button id="authTabSignup" onclick="switchAuthTab('signup')">Crear cuenta</button>
-    </div>
+    <p class="sub">Entra con tu ATTUID. Si no tienes acceso, pídeselo a tu gerente.</p>
 
     <div class="authError" id="authError"></div>
 
@@ -164,13 +159,6 @@
       <button type="submit" class="authBtn" id="loginBtn">Entrar</button>
     </form>
 
-    <form class="authForm hidden" id="signupForm">
-      <div class="authField"><label>Tu nombre</label><input type="text" id="signupNombre" required></div>
-      <div class="authField"><label>ATTUID</label><input type="text" id="signupAttuid" required placeholder="Ej. SGALV1234"></div>
-      <div class="authField"><label>Tienda</label><input type="text" id="signupTienda" required placeholder="Ej. León Centro"></div>
-      <div class="authField"><label>Contraseña</label><input type="password" id="signupPassword" required minlength="6" autocomplete="new-password"></div>
-      <button type="submit" class="authBtn" id="signupBtn">Crear cuenta</button>
-    </form>
   </div>
 </div>
 
@@ -207,13 +195,6 @@
 
 <script>
   // ---------- login / registro ----------
-  function switchAuthTab(which){
-    document.getElementById('authTabLogin').classList.toggle('active', which==='login');
-    document.getElementById('authTabSignup').classList.toggle('active', which==='signup');
-    document.getElementById('loginForm').classList.toggle('hidden', which!=='login');
-    document.getElementById('signupForm').classList.toggle('hidden', which!=='signup');
-    hideAuthError();
-  }
   function showAuthError(msg){
     var el = document.getElementById('authError');
     el.textContent = msg;
@@ -244,22 +225,6 @@
       showAuthError(mensajeError(err));
     }).finally(function(){
       btn.disabled = false; btn.textContent = 'Entrar';
-    });
-  });
-
-  document.getElementById('signupForm').addEventListener('submit', function(e){
-    e.preventDefault();
-    hideAuthError();
-    var btn = document.getElementById('signupBtn');
-    btn.disabled = true; btn.textContent = 'Creando cuenta…';
-    var nombre = document.getElementById('signupNombre').value.trim();
-    var attuid = document.getElementById('signupAttuid').value.trim();
-    var tienda = document.getElementById('signupTienda').value.trim();
-    var pass = document.getElementById('signupPassword').value;
-    LC.signUp(nombre, attuid, tienda, pass).catch(function(err){
-      showAuthError(mensajeError(err));
-    }).finally(function(){
-      btn.disabled = false; btn.textContent = 'Crear cuenta';
     });
   });
 
