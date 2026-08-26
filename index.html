@@ -171,7 +171,10 @@
 </div>
 
 <div class="tabbar">
-  <button class="tab active" id="tabPromos" onclick="switchTab('promos')">
+  <button class="tab active" id="tabTablero" onclick="switchTab('tablero')">
+    <span class="ic">📊</span> Tablero
+  </button>
+  <button class="tab" id="tabPromos" onclick="switchTab('promos')">
     <span class="ic">📲</span> Promos
   </button>
   <button class="tab" id="tabLlamadas" onclick="switchTab('llamadas')">
@@ -183,10 +186,12 @@
 </div>
 
 <div class="frames">
-  <div class="loading" id="loadingPromos"><div class="spinner"></div>Cargando Promos…</div>
+  <div class="loading" id="loadingTablero"><div class="spinner"></div>Cargando Tablero…</div>
+  <div class="loading hidden" id="loadingPromos"><div class="spinner"></div>Cargando Promos…</div>
   <div class="loading hidden" id="loadingLlamadas"><div class="spinner"></div>Cargando Llamadas…</div>
   <div class="loading hidden" id="loadingChecklist"><div class="spinner"></div>Cargando Checklist…</div>
-  <iframe id="framePromos" class="active" src="promos.html" title="Promos por WhatsApp"></iframe>
+  <iframe id="frameTablero" class="active" src="tablero.html" title="Tablero"></iframe>
+  <iframe id="framePromos" title="Promos por WhatsApp"></iframe>
   <iframe id="frameLlamadas" title="Llamadas"></iframe>
   <iframe id="frameChecklist" title="Check List de Salida"></iframe>
 </div>
@@ -248,12 +253,12 @@
 </script>
 
 <script>
-  var TABS = ['promos', 'llamadas', 'checklist'];
-  var SRC = { llamadas: 'llamadas.html', checklist: 'checklist_salida.html' };
-  var loaded = { promos: true, llamadas: false, checklist: false };
+  var TABS = ['tablero', 'promos', 'llamadas', 'checklist'];
+  var SRC = { promos: 'promos.html', llamadas: 'llamadas.html', checklist: 'checklist_salida.html' };
+  var loaded = { tablero: true, promos: false, llamadas: false, checklist: false };
 
-  document.getElementById('framePromos').addEventListener('load', function(){
-    document.getElementById('loadingPromos').classList.add('hidden');
+  document.getElementById('frameTablero').addEventListener('load', function(){
+    document.getElementById('loadingTablero').classList.add('hidden');
   });
 
   function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -264,7 +269,7 @@
       document.getElementById('frame' + cap(t)).classList.toggle('active', t === which);
     });
 
-    if(which !== 'promos' && !loaded[which]){
+    if(which !== 'tablero' && !loaded[which]){
       loaded[which] = true;
       var frame = document.getElementById('frame' + cap(which));
       frame.addEventListener('load', function(){

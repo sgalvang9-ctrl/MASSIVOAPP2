@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Tablero — León Centro</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0b2545; --navy-2:#123a6b; --navy-deep:#050f1f;
+    --cyan:#00b6f1; --cyan-soft:#4dcdf7; --cyan-dim:#00b6f114;
+    --paper:#eef2f7; --card:#fff;
+    --ink:#0f1c30; --ink-dim:#5c6b7d; --ink-faint:#94a2b3;
+    --line:#e2e8f0;
+    --good:#12a058; --good-bg:#e6f7ee;
+    --warn:#c07f08; --warn-bg:#fdf2df;
+    --bad:#cf3838; --bad-bg:#fdecec;
+    --radius:18px; --radius-sm:11px;
+    --shadow:0 1px 2px rgba(15,28,48,.05), 0 10px 30px -14px rgba(15,28,48,.16);
+    --fd:'Sora','Inter',sans-serif; --fb:'Inter',-apple-system,sans-serif; --fn:'Roboto Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+  body{font-family:var(--fb);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;padding-bottom:44px;}
+
+  /* ── CABECERA ── */
+  .hero{position:relative;overflow:hidden;color:#fff;padding:20px 18px 64px;
+    background:radial-gradient(ellipse at 85% -30%, rgba(0,182,241,.4) 0%, rgba(0,182,241,0) 55%),
+               linear-gradient(160deg,var(--navy-deep) 0%,var(--navy) 50%,var(--navy-2) 100%);}
+  .hero::before,.hero::after{content:"";position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,.09);pointer-events:none;}
+  .hero::before{top:-90px;right:-70px;width:280px;height:280px;}
+  .hero::after{top:-150px;right:-130px;width:400px;height:400px;}
+  .topline{position:relative;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:20px;}
+  .who{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;letter-spacing:.02em;opacity:.85;min-width:0;}
+  .pulse{flex:none;width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 4px rgba(0,182,241,.2);}
+  .who span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .chip{flex:none;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);padding:5px 10px;border-radius:999px;}
+
+  /* anillo de avance del día */
+  .ringwrap{position:relative;display:flex;align-items:center;gap:20px;}
+  .ring{flex:none;width:124px;height:124px;position:relative;}
+  .ring svg{transform:rotate(-90deg);}
+  .ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .ring .pct{font-family:var(--fd);font-size:29px;font-weight:800;letter-spacing:-.03em;line-height:1;}
+  .ring .cap{font-size:9.5px;text-transform:uppercase;letter-spacing:.09em;opacity:.6;margin-top:3px;font-weight:600;}
+  .herotxt{min-width:0;}
+  .herotxt h1{font-family:var(--fd);font-size:21px;font-weight:800;letter-spacing:-.025em;line-height:1.15;margin-bottom:7px;}
+  .herotxt p{font-size:13px;opacity:.72;line-height:1.5;}
+  .cuotachip{display:inline-flex;align-items:center;gap:7px;margin-top:11px;font-size:11.5px;font-weight:600;
+    background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.15);padding:6px 11px;border-radius:999px;
+    font-family:var(--fn);letter-spacing:.01em;}
+  .cuotachip b{font-weight:700;color:var(--cyan-soft);}
+  .cuotachip .tag{font-family:var(--fb);font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;
+    background:rgba(0,182,241,.25);padding:2px 6px;border-radius:5px;}
+
+  /* ── TARJETAS FLOTANTES ── */
+  main{max-width:760px;margin:0 auto;padding:0 14px;}
+  .floating{margin-top:-46px;position:relative;z-index:2;}
+  .gaps{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .gap{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 14px 14px;position:relative;overflow:hidden;}
+  .gap::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--cyan-soft));}
+  .gap.ok::before{background:linear-gradient(90deg,var(--good),#5fd39a);}
+  .cuotalbl{float:right;font-size:9.5px;color:var(--cyan);font-family:var(--fn);font-weight:700;letter-spacing:0;}
+  .gap .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);}
+  .gap .big{font-family:var(--fn);font-size:31px;font-weight:700;letter-spacing:-.03em;line-height:1.05;margin:7px 0 2px;color:var(--navy);}
+  .gap.ok .big{color:var(--good);}
+  .gap .sub{font-size:11px;color:var(--ink-faint);font-family:var(--fn);}
+  .gap .bar{height:4px;border-radius:3px;background:var(--paper);overflow:hidden;margin-top:10px;}
+  .gap .bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--cyan-soft));transition:width .5s cubic-bezier(.4,0,.2,1);}
+  .gap.ok .bar i{background:linear-gradient(90deg,var(--good),#5fd39a);}
+
+  /* ── SECCIONES ── */
+  .sec{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:26px 2px 11px;}
+  .sec h2{font-family:var(--fd);font-size:14.5px;font-weight:700;letter-spacing:-.01em;}
+  .sec .hint{font-size:11.5px;color:var(--ink-faint);font-weight:500;}
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px;}
+
+  /* ── SEMANA: barras por día ── */
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;align-items:end;height:118px;margin-bottom:9px;}
+  .day{display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;}
+  .stack{width:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;flex:1;}
+  .bm,.bl{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height .5s cubic-bezier(.4,0,.2,1);}
+  .bm{background:linear-gradient(180deg,var(--cyan-soft),var(--cyan));}
+  .bl{background:linear-gradient(180deg,#9db4cc,#6b8299);border-radius:0 0 4px 4px;}
+  .dname{font-size:9.5px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.04em;}
+  .day.hoy .dname{color:var(--cyan);}
+  .day.hoy .stack{outline:1.5px dashed rgba(0,182,241,.35);outline-offset:3px;border-radius:5px;}
+  .legend{display:flex;gap:16px;justify-content:center;font-size:11px;color:var(--ink-dim);padding-top:11px;border-top:1px solid var(--line);}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
+
+  /* ── ACUMULADO SEMANAL ── */
+  .wk-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);}
+  .wk-row:last-child{border-bottom:none;}
+  .wk-ico{flex:none;width:34px;height:34px;border-radius:10px;background:var(--cyan-dim);display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .wk-info{flex:1;min-width:0;}
+  .wk-name{font-size:13px;font-weight:600;}
+  .wk-bar{height:6px;border-radius:4px;background:var(--paper);overflow:hidden;margin-top:6px;}
+  .wk-bar i{display:block;height:100%;border-radius:4px;transition:width .5s;}
+  .wk-num{flex:none;font-family:var(--fn);font-size:13px;font-weight:700;text-align:right;min-width:74px;}
+  .wk-num small{display:block;font-size:10px;color:var(--ink-faint);font-weight:500;margin-top:1px;}
+
+  /* ── RANKING ── */
+  .rk{display:flex;align-items:center;gap:11px;padding:12px 8px;border-radius:12px;}
+  .rk + .rk{margin-top:2px;}
+  .rk.yo{background:var(--cyan-dim);}
+  .medal{flex:none;width:26px;text-align:center;font-size:15px;}
+  .medal.n{font-family:var(--fn);font-size:12.5px;font-weight:700;color:var(--ink-faint);}
+  .av{flex:none;width:37px;height:37px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--fd);font-weight:700;font-size:13px;color:#fff;background:linear-gradient(135deg,var(--navy-2),var(--navy));}
+  .rk-info{flex:1;min-width:0;}
+  .rk-name{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rk-sub{font-size:11px;color:var(--ink-faint);margin-top:2px;font-family:var(--fn);}
+  .rk-bar{height:5px;border-radius:3px;background:var(--paper);overflow:hidden;margin-top:6px;}
+  .rk-bar i{display:block;height:100%;border-radius:3px;transition:width .5s;}
+  .rk-pct{flex:none;font-family:var(--fn);font-size:14px;font-weight:700;min-width:48px;text-align:right;}
+
+  /* ── FORM GERENTE ── */
+  label{display:block;font-size:11.5px;font-weight:600;color:var(--ink-dim);margin:13px 0 5px;text-transform:uppercase;letter-spacing:.04em;}
+  input[type=number]{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+    font-size:16px;font-family:var(--fn);font-weight:500;background:#fbfcfe;color:var(--ink);}
+  input:focus{outline:none;border-color:var(--cyan);background:#fff;box-shadow:0 0 0 3px var(--cyan-dim);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .btn{display:block;width:100%;padding:13px;border:none;border-radius:var(--radius-sm);
+    font-size:14.5px;font-weight:700;cursor:pointer;font-family:var(--fb);margin-top:16px;
+    background:linear-gradient(135deg,var(--cyan-soft),var(--cyan));color:#042a3d;box-shadow:0 8px 20px -8px rgba(0,182,241,.55);}
+  .btn:active{transform:scale(.985);}
+  .btn:disabled{opacity:.6;cursor:wait;}
+  .nota{font-size:11.5px;color:var(--ink-dim);line-height:1.6;background:var(--paper);border-radius:var(--radius-sm);padding:11px 12px;margin-top:11px;}
+  .ind-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);}
+  .ind-row:last-of-type{border-bottom:none;}
+  .ind-av{flex:none;width:33px;height:33px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--fd);font-weight:700;font-size:12px;color:#fff;background:linear-gradient(135deg,var(--navy-2),var(--navy));}
+  .ind-nom{flex:1;min-width:0;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ind-in{flex:none;width:62px;}
+  .ind-in input{padding:8px 7px;font-size:14px;text-align:center;}
+  .ind-head{display:flex;gap:10px;align-items:center;padding-bottom:8px;border-bottom:1.5px solid var(--line);
+    font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);}
+  .ind-head .sp{flex:1;}
+  .ind-head span.w{flex:none;width:62px;text-align:center;}
+  .hidden{display:none!important;}
+  .vacio{text-align:center;padding:24px 10px;color:var(--ink-faint);font-size:13px;}
+  @media(max-width:400px){ .ring{width:104px;height:104px;} .herotxt h1{font-size:18.5px;} .gap .big{font-size:27px;} }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="topline">
+    <div class="who"><span class="pulse"></span><span id="ctxLinea">Cargando…</span></div>
+    <div class="chip" id="chipFecha">—</div>
+  </div>
+
+  <div class="ringwrap">
+    <div class="ring">
+      <svg width="124" height="124" viewBox="0 0 124 124">
+        <circle cx="62" cy="62" r="52" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="11"/>
+        <circle id="ringArc" cx="62" cy="62" r="52" fill="none" stroke="#00b6f1" stroke-width="11"
+                stroke-linecap="round" stroke-dasharray="327" stroke-dashoffset="327"
+                style="transition:stroke-dashoffset .7s cubic-bezier(.4,0,.2,1), stroke .4s"/>
+      </svg>
+      <div class="val"><div class="pct" id="ringPct">—</div><div class="cap">del día</div></div>
+    </div>
+    <div class="herotxt">
+      <h1 id="heroTitulo">Tu avance de hoy</h1>
+      <p id="heroSub">Cargando tu actividad…</p>
+      <div id="cuotaHoy" class="cuotachip hidden"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="floating">
+    <div class="gaps">
+      <div class="gap" id="gMensajes">
+        <div class="lbl">Mensajes <span class="cuotalbl" id="cuotaLblMensajes"></span></div>
+        <div class="big" id="numMensajes">—</div>
+        <div class="sub" id="metaMensajes">—</div>
+        <div class="bar"><i id="progMensajes" style="width:0%"></i></div>
+      </div>
+      <div class="gap" id="gLlamadas">
+        <div class="lbl">Llamadas <span class="cuotalbl" id="cuotaLblLlamadas"></span></div>
+        <div class="big" id="numLlamadas">—</div>
+        <div class="sub" id="metaLlamadas">—</div>
+        <div class="bar"><i id="progLlamadas" style="width:0%"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="avisoSinCuota" class="nota hidden" style="margin-top:14px;">
+    Todavía no hay cuotas definidas. <b>Pídele a tu gerente que las configure</b> para ver tu avance.
+  </div>
+
+  <div class="sec"><h2>Tu semana</h2><span class="hint" id="hintSemana">—</span></div>
+  <div class="card">
+    <div class="week" id="graficaSemana"></div>
+    <div class="legend">
+      <span><i style="background:linear-gradient(180deg,#4dcdf7,#00b6f1)"></i>Mensajes</span>
+      <span><i style="background:linear-gradient(180deg,#9db4cc,#6b8299)"></i>Llamadas</span>
+    </div>
+  </div>
+
+  <div class="sec"><h2>Acumulado semanal</h2><span class="hint">contra tu cuota</span></div>
+  <div class="card" id="cardAcumulado">
+    <div class="wk-row">
+      <div class="wk-ico">📲</div>
+      <div class="wk-info">
+        <div class="wk-name">Mensajes</div>
+        <div class="wk-bar"><i id="wkBarM" style="width:0%;background:linear-gradient(90deg,#00b6f1,#4dcdf7)"></i></div>
+      </div>
+      <div class="wk-num" id="wkNumM">—<small id="wkSubM">—</small></div>
+    </div>
+    <div class="wk-row">
+      <div class="wk-ico">📞</div>
+      <div class="wk-info">
+        <div class="wk-name">Llamadas</div>
+        <div class="wk-bar"><i id="wkBarL" style="width:0%;background:linear-gradient(90deg,#00b6f1,#4dcdf7)"></i></div>
+      </div>
+      <div class="wk-num" id="wkNumL">—<small id="wkSubL">—</small></div>
+    </div>
+  </div>
+
+  <div class="sec"><h2>Tu venta</h2><span class="hint">acumulado de la semana</span></div>
+  <div class="card" id="cardVenta">
+    <div class="vacio" id="ventaVacio">Cargando…</div>
+    <div id="listaVenta"></div>
+  </div>
+
+  <div class="sec"><h2>Equipo</h2><span class="hint">semana en curso</span></div>
+  <div class="card">
+    <div class="vacio" id="rankingVacio">Cargando actividad del equipo…</div>
+    <div id="rankingLista"></div>
+  </div>
+
+  <div id="zonaVentaEquipo" class="hidden">
+    <div class="sec"><h2>Venta del equipo</h2><span class="hint">solo gerente</span></div>
+    <div class="card"><div id="tablaVentaEquipo"></div></div>
+  </div>
+
+  <div id="zonaGerente" class="hidden">
+    <div class="sec"><h2>Cuotas del equipo</h2><span class="hint">solo gerente</span></div>
+    <div class="card">
+      <div class="row2">
+        <div><label>Mensajes / semana</label><input type="number" min="0" id="cuotaMensajes" placeholder="0"></div>
+        <div><label>Llamadas / semana</label><input type="number" min="0" id="cuotaLlamadas" placeholder="0"></div>
+      </div>
+      <label>Días de piso por semana</label>
+      <input type="number" min="1" max="7" id="cuotaDias" placeholder="6">
+      <button class="btn" id="btnGuardarCuotas">Guardar cuota general</button>
+      <div class="nota">La cuota diaria se calcula sola: semanal ÷ días de piso. Esta aplica a quien no tenga una propia.</div>
+    </div>
+
+    <div class="sec"><h2>Metas de venta</h2><span class="hint">por semana, todo el equipo</span></div>
+    <div class="card">
+      <div class="row2">
+        <div><label>Pospago nuevo</label><input type="number" min="0" id="kPospagoNuevo" placeholder="0"></div>
+        <div><label>Pospago propio</label><input type="number" min="0" id="kPospagoPropio" placeholder="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>Renovación</label><input type="number" min="0" id="kRenovacion" placeholder="0"></div>
+        <div><label>Accesorios</label><input type="number" min="0" id="kAccesorios" placeholder="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>Seguros</label><input type="number" min="0" id="kSeguros" placeholder="0"></div>
+        <div><label>ARPU objetivo ($)</label><input type="number" min="0" id="kArpu" placeholder="0"></div>
+      </div>
+      <button class="btn" id="btnGuardarKpis">Guardar metas de venta</button>
+      <div class="nota">Estos números salen del Checklist de cada ejecutivo — nadie los captura dos veces.</div>
+    </div>
+
+    <div class="sec"><h2>Cuota por ejecutivo</h2><span class="hint">deja vacío para usar la general</span></div>
+    <div class="card">
+      <div id="listaIndividual"><div class="vacio">Cargando equipo…</div></div>
+      <button class="btn" id="btnGuardarIndividual">Guardar cuotas individuales</button>
+    </div>
+  </div>
+</main>
+<script>
+(function(){
+  "use strict";
+  var perfil = null, cuotas = null;
+  var DIAS = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+  function el(id){ return document.getElementById(id); }
+  function esc(v){
+    return String(v == null ? "" : v).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+  function iniciales(n){
+    var p = String(n||"").trim().split(/\s+/);
+    return ((p[0]||"?").charAt(0) + (p[1] ? p[1].charAt(0) : "")).toUpperCase();
+  }
+  function hoyISO(){
+    var f = new Date();
+    return f.getFullYear()+"-"+String(f.getMonth()+1).padStart(2,"0")+"-"+String(f.getDate()).padStart(2,"0");
+  }
+  function idxHoy(){ var d = new Date().getDay(); return d === 0 ? 6 : d - 1; }
+  function cuotaDiaria(sem){
+    var dias = (cuotas && cuotas.diasPiso) ? cuotas.diasPiso : 6;
+    return Math.ceil((Number(sem)||0) / dias);
+  }
+  // cuota semanal que aplica a esta persona (individual si tiene, si no la del equipo)
+  function miCuota(){ return LC.cuotaDe(cuotas, perfil.attuid); }
+  function colorPct(p){
+    if(p === null) return "var(--ink-faint)";
+    return p >= 100 ? "var(--good)" : (p >= 60 ? "var(--warn)" : "var(--bad)");
+  }
+
+  function pintarGap(pref, hechos, meta){
+    var num = el("num"+pref), prog = el("prog"+pref), metaEl = el("meta"+pref), box = el("g"+pref);
+    if(!meta || meta <= 0){
+      num.textContent = hechos; metaEl.textContent = "sin cuota";
+      prog.style.width = "0%"; box.classList.remove("ok"); return;
+    }
+    var falta = Math.max(meta - hechos, 0);
+    prog.style.width = Math.min(Math.round(hechos/meta*100),100) + "%";
+    metaEl.textContent = hechos + " de " + meta + " hoy";
+    if(falta === 0){ num.textContent = "✓ listo"; box.classList.add("ok"); }
+    else { num.textContent = falta; box.classList.remove("ok"); }
+  }
+
+  function pintarAnillo(pct){
+    var arc = el("ringArc"), C = 327;
+    var p = Math.max(0, Math.min(pct, 100));
+    arc.style.strokeDashoffset = C - (C * p / 100);
+    arc.setAttribute("stroke", p >= 100 ? "#4ade80" : (p >= 60 ? "#fbbf24" : "#00b6f1"));
+    el("ringPct").textContent = pct === null ? "—" : p + "%";
+  }
+
+  function cargarMiDia(){
+    return LC.contarActividadDia(perfil.attuid, hoyISO()).then(function(d){
+      var mia = miCuota();
+      var mM = cuotaDiaria(mia.mensajesSemana), mL = cuotaDiaria(mia.llamadasSemana);
+      el("cuotaLblMensajes").textContent = mM > 0 ? "meta " + mM : "";
+      el("cuotaLblLlamadas").textContent = mL > 0 ? "meta " + mL : "";
+      if(mM > 0 || mL > 0){
+        el("cuotaHoy").classList.remove("hidden");
+        el("cuotaHoy").innerHTML = "Tu cuota de hoy: <b>" + mM + "</b> mensajes · <b>" + mL + "</b> llamadas" +
+          (mia.individual ? ' <span class="tag">personal</span>' : '');
+      }else{
+        el("cuotaHoy").classList.add("hidden");
+      }
+      pintarGap("Mensajes", d.mensajes, mM);
+      pintarGap("Llamadas", d.llamadas, mL);
+
+      var metaTot = mM + mL;
+      if(metaTot <= 0){
+        pintarAnillo(null);
+        el("heroTitulo").textContent = "Sin cuotas definidas";
+        el("heroSub").textContent = "Hoy llevas " + d.mensajes + " mensajes y " + d.llamadas + " llamadas.";
+        return;
+      }
+      var pct = Math.round((d.mensajes + d.llamadas) / metaTot * 100);
+      pintarAnillo(pct);
+      var faltaM = Math.max(mM - d.mensajes, 0), faltaL = Math.max(mL - d.llamadas, 0);
+      if(faltaM === 0 && faltaL === 0){
+        el("heroTitulo").textContent = "Cuota del día cumplida";
+        el("heroSub").textContent = "Todo lo que hagas de aquí en adelante ya suma extra.";
+      }else{
+        el("heroTitulo").textContent = "Falta para cerrar tu día";
+        var partes = [];
+        if(faltaM > 0) partes.push(faltaM + " mensajes");
+        if(faltaL > 0) partes.push(faltaL + " llamadas");
+        el("heroSub").textContent = "Te faltan " + partes.join(" y ") + ".";
+      }
+    }).catch(function(){ el("heroSub").textContent = "No se pudo cargar tu actividad."; });
+  }
+
+  function cargarMiSemana(){
+    var semana = LC.lunesDeLaSemana();
+    return LC.actividadSemanaPorDia(perfil.attuid, semana).then(function(d){
+      var maxV = 1;
+      for(var i=0;i<7;i++) maxV = Math.max(maxV, d.mensajes[i] + d.llamadas[i]);
+      var hoy = idxHoy();
+      el("graficaSemana").innerHTML = DIAS.map(function(nm, i){
+        var m = d.mensajes[i], l = d.llamadas[i];
+        var hM = Math.round(m / maxV * 88), hL = Math.round(l / maxV * 88);
+        return '<div class="day' + (i === hoy ? ' hoy' : '') + '">' +
+          '<div class="stack">' +
+            (m > 0 ? '<div class="bm" style="height:' + hM + 'px" title="' + m + ' mensajes"></div>' : '') +
+            (l > 0 ? '<div class="bl" style="height:' + hL + 'px" title="' + l + ' llamadas"></div>' : '') +
+          '</div>' +
+          '<div class="dname">' + nm + '</div></div>';
+      }).join("");
+
+      var totM = d.mensajes.reduce(function(a,b){return a+b;},0);
+      var totL = d.llamadas.reduce(function(a,b){return a+b;},0);
+      el("hintSemana").textContent = totM + " msj · " + totL + " llam.";
+
+      var mia2 = miCuota();
+      var metaM = mia2.mensajesSemana, metaL = mia2.llamadasSemana;
+      function fila(pref, tot, meta){
+        var pct = meta > 0 ? Math.round(tot/meta*100) : null;
+        el("wkBar"+pref).style.width = (pct === null ? 0 : Math.min(pct,100)) + "%";
+        el("wkBar"+pref).style.background = pct === null ? "var(--ink-faint)"
+          : (pct >= 100 ? "linear-gradient(90deg,#12a058,#5fd39a)"
+          : (pct >= 60 ? "linear-gradient(90deg,#c07f08,#e8c07a)" : "linear-gradient(90deg,#cf3838,#e08a8a)"));
+        el("wkNum"+pref).childNodes[0].nodeValue = meta > 0 ? (tot + " / " + meta) : String(tot);
+        el("wkSub"+pref).textContent = pct === null ? "sin cuota" : (pct + "% de la semana");
+        el("wkNum"+pref).style.color = colorPct(pct);
+      }
+      fila("M", totM, metaM);
+      fila("L", totL, metaL);
+    }).catch(function(){});
+  }
+
+  function cargarRanking(){
+    var semana = LC.lunesDeLaSemana();
+    return Promise.all([ LC.contarActividadSemana(semana), LC.listarEquipo() ]).then(function(res){
+      var act = res[0] || {}, equipo = res[1] || [];
+      var msj = act.mensajesPorAttuid || {}, llm = act.llamadasPorAttuid || {};
+      var vistos = {};
+      equipo.forEach(function(p){ vistos[p.attuid] = true; });
+      Object.keys(msj).concat(Object.keys(llm)).forEach(function(a){
+        if(a && a !== "(sin ATTUID)" && !vistos[a]){ vistos[a]=true; equipo.push({attuid:a, nombre:a}); }
+      });
+      var filas = equipo.map(function(p){
+        var m = msj[p.attuid]||0, l = llm[p.attuid]||0;
+        var cp = LC.cuotaDe(cuotas, p.attuid);
+        var metaTot = cp.mensajesSemana + cp.llamadasSemana;
+        return { attuid:p.attuid, nombre:p.nombre, m:m, l:l, total:m+l,
+                 individual: cp.individual,
+                 pct: metaTot > 0 ? Math.round((m+l)/metaTot*100) : null };
+      });
+      filas.sort(function(a,b){
+        if(a.pct !== null && b.pct !== null && a.pct !== b.pct) return b.pct - a.pct;
+        return b.total - a.total;
+      });
+      if(!filas.length){ el("rankingVacio").textContent = "Nadie tiene actividad registrada esta semana."; return; }
+      el("rankingVacio").classList.add("hidden");
+      var medallas = ["🥇","🥈","🥉"];
+      el("rankingLista").innerHTML = filas.map(function(f,i){
+        var col = colorPct(f.pct);
+        var grad = f.pct === null ? "var(--ink-faint)"
+          : (f.pct >= 100 ? "linear-gradient(90deg,#12a058,#5fd39a)"
+          : (f.pct >= 60 ? "linear-gradient(90deg,#c07f08,#e8c07a)" : "linear-gradient(90deg,#cf3838,#e08a8a)"));
+        var esYo = f.attuid === perfil.attuid;
+        return '<div class="rk' + (esYo ? ' yo' : '') + '">' +
+          '<div class="medal' + (i < 3 ? '' : ' n') + '">' + (i < 3 ? medallas[i] : (i+1)) + '</div>' +
+          '<div class="av">' + esc(iniciales(f.nombre)) + '</div>' +
+          '<div class="rk-info">' +
+            '<div class="rk-name">' + esc(f.nombre) + (esYo ? ' · tú' : '') + '</div>' +
+            '<div class="rk-sub">' + f.m + ' msj · ' + f.l + ' llam.' + (f.individual ? ' · cuota propia' : '') + '</div>' +
+            '<div class="rk-bar"><i style="width:' + (f.pct === null ? 0 : Math.min(f.pct,100)) + '%;background:' + grad + '"></i></div>' +
+          '</div>' +
+          '<div class="rk-pct" style="color:' + col + '">' + (f.pct === null ? '—' : f.pct + '%') + '</div>' +
+        '</div>';
+      }).join("");
+    }).catch(function(){ el("rankingVacio").textContent = "No se pudo cargar la actividad del equipo."; });
+  }
+
+  var KPIS = [
+    ["pospagoNuevo",  "Pospago nuevo",  "📱"],
+    ["pospagoPropio", "Pospago propio", "🔄"],
+    ["renovacion",    "Renovación",     "♻️"],
+    ["accesorios",    "Accesorios",     "🎧"],
+    ["seguros",       "Seguros",        "🛡️"],
+    ["arpu",          "ARPU promedio",  "💵"]
+  ];
+
+  function cargarMiVenta(){
+    var semana = LC.lunesDeLaSemana();
+    return LC.kpisSemana(perfil.attuid, semana).then(function(k){
+      if(!k){ el("ventaVacio").textContent = "Sin datos de venta esta semana."; return; }
+      var metas = cuotas.kpis || {};
+      var hayMeta = KPIS.some(function(x){ return Number(metas[x[0]]) > 0; });
+      var hayDato = KPIS.some(function(x){ return Number(k[x[0]]) > 0; });
+      if(!hayMeta && !hayDato){
+        el("ventaVacio").textContent = "Todavía no hay metas de venta ni actividad registrada.";
+        return;
+      }
+      el("ventaVacio").classList.add("hidden");
+      el("listaVenta").innerHTML = KPIS.map(function(x){
+        var key = x[0], nom = x[1], ico = x[2];
+        var val = Number(k[key]) || 0, meta = Number(metas[key]) || 0;
+        var pct = meta > 0 ? Math.round(val/meta*100) : null;
+        var grad = pct === null ? "var(--ink-faint)"
+          : (pct >= 100 ? "linear-gradient(90deg,#12a058,#5fd39a)"
+          : (pct >= 60 ? "linear-gradient(90deg,#c07f08,#e8c07a)" : "linear-gradient(90deg,#cf3838,#e08a8a)"));
+        var esDinero = (key === "arpu");
+        var muestra = esDinero ? ("$" + val) : val;
+        var muestraMeta = meta > 0 ? (esDinero ? (" / $" + meta) : (" / " + meta)) : "";
+        return '<div class="wk-row">' +
+          '<div class="wk-ico">' + ico + '</div>' +
+          '<div class="wk-info"><div class="wk-name">' + nom + '</div>' +
+            '<div class="wk-bar"><i style="width:' + (pct === null ? 0 : Math.min(pct,100)) + '%;background:' + grad + '"></i></div>' +
+          '</div>' +
+          '<div class="wk-num" style="color:' + colorPct(pct) + '">' + muestra + muestraMeta +
+            '<small>' + (pct === null ? "sin meta" : pct + "%") + '</small></div>' +
+        '</div>';
+      }).join("");
+    }).catch(function(){ el("ventaVacio").textContent = "No se pudo cargar tu venta."; });
+  }
+
+  function cargarVentaEquipo(){
+    if(!perfil || perfil.rol !== "gerente") return Promise.resolve();
+    el("zonaVentaEquipo").classList.remove("hidden");
+    var semana = LC.lunesDeLaSemana();
+    return Promise.all([ LC.kpisEquipoSemana(semana), LC.listarEquipo() ]).then(function(r){
+      var datos = r[0] || {}, equipo = r[1] || [];
+      var nombres = {};
+      equipo.forEach(function(p){ nombres[p.attuid] = p.nombre; });
+      var attuids = Object.keys(datos).filter(function(a){ return a !== "(sin ATTUID)"; });
+      if(!attuids.length){
+        el("tablaVentaEquipo").innerHTML = '<div class="vacio">Nadie ha capturado venta esta semana.</div>';
+        return;
+      }
+      var metas = cuotas.kpis || {};
+      el("tablaVentaEquipo").innerHTML = attuids.map(function(a){
+        var k = datos[a];
+        var total = k.pospagoNuevo + k.pospagoPropio + k.renovacion;
+        var metaTot = (Number(metas.pospagoNuevo)||0) + (Number(metas.pospagoPropio)||0) + (Number(metas.renovacion)||0);
+        var pct = metaTot > 0 ? Math.round(total/metaTot*100) : null;
+        var grad = pct === null ? "var(--ink-faint)"
+          : (pct >= 100 ? "linear-gradient(90deg,#12a058,#5fd39a)"
+          : (pct >= 60 ? "linear-gradient(90deg,#c07f08,#e8c07a)" : "linear-gradient(90deg,#cf3838,#e08a8a)"));
+        return '<div class="rk">' +
+          '<div class="av">' + esc(iniciales(nombres[a] || a)) + '</div>' +
+          '<div class="rk-info"><div class="rk-name">' + esc(nombres[a] || a) + '</div>' +
+            '<div class="rk-sub">' + k.pospagoNuevo + ' nuevo · ' + k.pospagoPropio + ' propio · ' +
+              k.renovacion + ' renov · ' + k.accesorios + ' acc · ' + k.seguros + ' seg</div>' +
+            '<div class="rk-bar"><i style="width:' + (pct === null ? 0 : Math.min(pct,100)) + '%;background:' + grad + '"></i></div>' +
+          '</div>' +
+          '<div class="rk-pct" style="color:' + colorPct(pct) + '">' + (pct === null ? '—' : pct + '%') + '</div>' +
+        '</div>';
+      }).join("");
+    }).catch(function(){
+      el("tablaVentaEquipo").innerHTML = '<div class="vacio">No se pudo cargar la venta del equipo.</div>';
+    });
+  }
+
+  function pintarCuotasIndividuales(){
+    LC.listarEquipo().then(function(equipo){
+      if(!equipo.length){ el("listaIndividual").innerHTML = '<div class="vacio">No hay ejecutivos en la lista.</div>'; return; }
+      var head = '<div class="ind-head"><span style="width:33px"></span><span class="sp">Ejecutivo</span>' +
+                 '<span class="w">Msj/sem</span><span class="w">Llam/sem</span></div>';
+      el("listaIndividual").innerHTML = head + equipo.map(function(p){
+        var ind = (cuotas.porAttuid && cuotas.porAttuid[p.attuid]) || {};
+        return '<div class="ind-row" data-attuid="' + esc(p.attuid) + '">' +
+          '<div class="ind-av">' + esc(iniciales(p.nombre)) + '</div>' +
+          '<div class="ind-nom">' + esc(p.nombre) + '</div>' +
+          '<div class="ind-in"><input type="number" min="0" class="qm" placeholder="—" value="' +
+            (ind.mensajesSemana || "") + '"></div>' +
+          '<div class="ind-in"><input type="number" min="0" class="ql" placeholder="—" value="' +
+            (ind.llamadasSemana || "") + '"></div>' +
+        '</div>';
+      }).join("");
+    }).catch(function(){
+      el("listaIndividual").innerHTML = '<div class="vacio">No se pudo cargar el equipo.</div>';
+    });
+  }
+
+  function zonaGerente(){
+    if(!perfil || perfil.rol !== "gerente") return;
+    el("zonaGerente").classList.remove("hidden");
+    pintarCuotasIndividuales();
+
+    el("btnGuardarIndividual").addEventListener("click", function(){
+      var btn = this;
+      btn.disabled = true; btn.textContent = "Guardando…";
+      var mapa = {};
+      Array.prototype.forEach.call(document.querySelectorAll(".ind-row"), function(row){
+        var a = row.getAttribute("data-attuid");
+        var m = row.querySelector(".qm").value.trim();
+        var l = row.querySelector(".ql").value.trim();
+        if(m || l){
+          mapa[a] = {
+            mensajesSemana: Number(m) || 0,
+            llamadasSemana: Number(l) || 0
+          };
+        }
+      });
+      LC.setCuotas({
+        mensajesSemana: cuotas.mensajesSemana,
+        llamadasSemana: cuotas.llamadasSemana,
+        diasPiso: cuotas.diasPiso,
+        porAttuid: mapa,
+        kpis: cuotas.kpis || {}
+      }).then(function(){
+        cuotas.porAttuid = mapa;
+        return Promise.all([cargarMiDia(), cargarMiSemana(), cargarRanking()]);
+      }).catch(function(e){
+        alert("No se pudieron guardar: " + (e && e.message ? e.message : e));
+      }).finally(function(){
+        btn.disabled = false; btn.textContent = "Guardar cuotas individuales";
+      });
+    });
+    el("cuotaMensajes").value = cuotas.mensajesSemana || "";
+    el("cuotaLlamadas").value = cuotas.llamadasSemana || "";
+    el("cuotaDias").value = cuotas.diasPiso || 6;
+    var mk = cuotas.kpis || {};
+    el("kPospagoNuevo").value  = mk.pospagoNuevo  || "";
+    el("kPospagoPropio").value = mk.pospagoPropio || "";
+    el("kRenovacion").value    = mk.renovacion    || "";
+    el("kAccesorios").value    = mk.accesorios    || "";
+    el("kSeguros").value       = mk.seguros       || "";
+    el("kArpu").value          = mk.arpu          || "";
+
+    el("btnGuardarKpis").addEventListener("click", function(){
+      var btn = this;
+      btn.disabled = true; btn.textContent = "Guardando…";
+      var kp = {
+        pospagoNuevo:  Number(el("kPospagoNuevo").value)  || 0,
+        pospagoPropio: Number(el("kPospagoPropio").value) || 0,
+        renovacion:    Number(el("kRenovacion").value)    || 0,
+        accesorios:    Number(el("kAccesorios").value)    || 0,
+        seguros:       Number(el("kSeguros").value)       || 0,
+        arpu:          Number(el("kArpu").value)          || 0
+      };
+      LC.setCuotas({
+        mensajesSemana: cuotas.mensajesSemana,
+        llamadasSemana: cuotas.llamadasSemana,
+        diasPiso: cuotas.diasPiso,
+        porAttuid: cuotas.porAttuid || {},
+        kpis: kp
+      }).then(function(){
+        cuotas.kpis = kp;
+        return Promise.all([cargarMiVenta(), cargarVentaEquipo()]);
+      }).catch(function(e){
+        alert("No se pudieron guardar: " + (e && e.message ? e.message : e));
+      }).finally(function(){ btn.disabled = false; btn.textContent = "Guardar metas de venta"; });
+    });
+
+    el("btnGuardarCuotas").addEventListener("click", function(){
+      var btn = this;
+      btn.disabled = true; btn.textContent = "Guardando…";
+      var nv = { mensajesSemana: el("cuotaMensajes").value,
+                 llamadasSemana: el("cuotaLlamadas").value,
+                 diasPiso: el("cuotaDias").value,
+                 porAttuid: cuotas.porAttuid || {}, kpis: cuotas.kpis || {} };
+      LC.setCuotas(nv).then(function(){
+        cuotas = { mensajesSemana:Number(nv.mensajesSemana)||0,
+                   llamadasSemana:Number(nv.llamadasSemana)||0,
+                   diasPiso:Number(nv.diasPiso)||6,
+                   porAttuid: nv.porAttuid || {}, kpis: nv.kpis || {} };
+        el("avisoSinCuota").classList.add("hidden");
+        return Promise.all([cargarMiDia(), cargarMiSemana(), cargarRanking()]);
+      }).catch(function(e){
+        alert("No se pudieron guardar las cuotas: " + (e && e.message ? e.message : e));
+      }).finally(function(){ btn.disabled = false; btn.textContent = "Guardar cuotas"; });
+    });
+  }
+
+  // arranque
+  var f = new Date();
+  el("chipFecha").textContent = DIAS[idxHoy()] + " " + f.getDate() + " " +
+    ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][f.getMonth()];
+
+  if(!window.LC){
+    el("heroSub").textContent = "Inicia sesión desde la pantalla principal.";
+  }else{
+    LC.onAuthChange(function(user, p){
+      if(!user || !p){
+        el("heroTitulo").textContent = "Inicia sesión";
+        el("heroSub").textContent = "Entra desde la pantalla principal con tu ATTUID.";
+        el("ctxLinea").textContent = "Sin sesión";
+        el("rankingVacio").textContent = "—";
+        return;
+      }
+      perfil = p;
+      el("ctxLinea").textContent = (p.nombre || p.attuid) + " · " + (p.tienda || "León Centro");
+      LC.getCuotas().then(function(c){
+        cuotas = c;
+        if(!c.mensajesSemana && !c.llamadasSemana) el("avisoSinCuota").classList.remove("hidden");
+        zonaGerente();
+        return Promise.all([cargarMiDia(), cargarMiSemana(), cargarRanking(), cargarMiVenta(), cargarVentaEquipo()]);
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

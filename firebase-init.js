@@ -54,7 +54,16 @@ function fechaLocal(d){
   return yyyy + "-" + mm + "-" + dd;
 }
 
+function lunesDeLaSemana(d){
+  d = d || new Date();
+  var dia = d.getDay();               // 0=domingo
+  var off = (dia === 0) ? -6 : 1 - dia;
+  var l = new Date(d); l.setDate(d.getDate() + off);
+  return fechaLocal(l);
+}
+
 window.LC = {
+  lunesDeLaSemana: lunesDeLaSemana,
   auth: LCAuth,
   db: LCDb,
 
@@ -253,6 +262,137 @@ window.LC = {
       var out = [];
       snap.forEach(function(doc){ out.push(doc.data()); });
       return out;
+    });
+  },
+
+  // ---------- Cuotas del equipo (las fija el gerente, las ve todo el equipo) ----------
+  getCuotas: function(){
+    return LCDb.collection("config").doc("cuotas").get().then(function(doc){
+      var d = doc.exists ? doc.data() : {};
+      return {
+        mensajesSemana: d.mensajesSemana || 0,
+        llamadasSemana: d.llamadasSemana || 0,
+        diasPiso: d.diasPiso || 6,
+        porAttuid: d.porAttuid || {},   // cuotas individuales que pisan la general
+        kpis: d.kpis || { pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpu:0 }
+      };
+    }).catch(function(){
+      return { mensajesSemana:0, llamadasSemana:0, diasPiso:6, porAttuid:{},
+               kpis:{ pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpu:0 } };
+    });
+  },
+
+  setCuotas: function(cuotas){
+    var doc = {
+      mensajesSemana: Number(cuotas.mensajesSemana) || 0,
+      llamadasSemana: Number(cuotas.llamadasSemana) || 0,
+      diasPiso: Number(cuotas.diasPiso) || 6,
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+      actualizadoPor: LCAuth.currentUser ? LCAuth.currentUser.uid : null
+    };
+    if(cuotas.porAttuid) doc.porAttuid = cuotas.porAttuid;
+    if(cuotas.kpis) doc.kpis = cuotas.kpis;
+    return LCDb.collection("config").doc("cuotas").set(doc, {merge:true});
+  },
+
+  // Cuota semanal efectiva de una persona: la suya si la tiene, si no la del equipo
+  cuotaDe: function(cuotas, attuid){
+    var ind = (cuotas && cuotas.porAttuid && cuotas.porAttuid[attuid]) || null;
+    return {
+      mensajesSemana: (ind && Number(ind.mensajesSemana)) || Number(cuotas.mensajesSemana) || 0,
+      llamadasSemana: (ind && Number(ind.llamadasSemana)) || Number(cuotas.llamadasSemana) || 0,
+      individual: !!ind
+    };
+  },
+
+  // ---------- KPIs de venta (salen del Checklist, sin captura extra) ----------
+  kpisSemana: function(attuid, semana){
+    var uid = LCAuth.currentUser ? LCAuth.currentUser.uid : null;
+    if(!uid) return Promise.resolve(null);
+    return LCDb.collection("checklistDias")
+      .where("uid","==",uid).where("semana","==",semana).get()
+      .then(function(snap){ return window.LC._sumarKpis(snap); })
+      .catch(function(){ return window.LC._kpisVacio(); });
+  },
+
+  kpisEquipoSemana: function(semana){
+    return LCDb.collection("checklistDias").where("semana","==",semana).get().then(function(snap){
+      var porAttuid = {};
+      snap.forEach(function(doc){
+        var d = doc.data(), a = d.attuid || "(sin ATTUID)";
+        if(!porAttuid[a]) porAttuid[a] = { docs: [] };
+        porAttuid[a].docs.push(d);
+      });
+      var out = {};
+      Object.keys(porAttuid).forEach(function(a){
+        out[a] = window.LC._sumarDocs(porAttuid[a].docs);
+      });
+      return out;
+    }).catch(function(){ return {}; });
+  },
+
+  _kpisVacio: function(){
+    return { pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpu:0 };
+  },
+
+  _sumarDocs: function(docs){
+    var t = window.LC._kpisVacio(), arpuVals = [];
+    docs.forEach(function(d){
+      var a = d.activos || {};
+      t.pospagoNuevo  += Number(a.pospagoNuevo)  || 0;
+      t.pospagoPropio += Number(a.pospagoPropio) || 0;
+      t.renovacion    += Number(a.renovacion)    || 0;
+      t.accesorios    += Number(a.accesorios)    || 0;
+      t.seguros       += Number(a.seguros)       || 0;
+      var r = d.arpu || {};
+      [r.equipoNuevo, r.equipoPropio, r.renovaciones].forEach(function(v){
+        var n = Number(v) || 0;
+        if(n > 0) arpuVals.push(n);
+      });
+    });
+    t.arpu = arpuVals.length ? Math.round(arpuVals.reduce(function(x,y){return x+y;},0) / arpuVals.length) : 0;
+    return t;
+  },
+
+  _sumarKpis: function(snap){
+    var docs = [];
+    snap.forEach(function(doc){ docs.push(doc.data()); });
+    return window.LC._sumarDocs(docs);
+  },
+
+  // Lista de todo el equipo (para el ranking), desde la lista blanca
+  listarEquipo: function(){
+    return LCDb.collection("attuidsAutorizados").get().then(function(snap){
+      var out = [];
+      snap.forEach(function(doc){
+        var d = doc.data();
+        if(d.activo === true) out.push({ attuid: doc.id, nombre: d.nombreSugerido || doc.id, rol: d.rol || "ejecutivo" });
+      });
+      return out;
+    }).catch(function(){ return []; });
+  },
+
+  // Actividad día por día de la semana, para graficar (Lun→Dom)
+  actividadSemanaPorDia: function(attuid, semanaInicio){
+    var inicio = new Date(semanaInicio + "T00:00:00");
+    var fin = new Date(inicio); fin.setDate(fin.getDate() + 6);
+    var fFin = fechaLocal(fin);
+    var qm = LCDb.collection("envios").where("attuid","==",attuid)
+              .where("fecha",">=",semanaInicio).where("fecha","<=",fFin).get();
+    var ql = LCDb.collection("llamadas").where("attuid","==",attuid)
+              .where("fecha",">=",semanaInicio).where("fecha","<=",fFin).get();
+    return Promise.all([qm, ql]).then(function(r){
+      var dias = [];
+      for(var i=0;i<7;i++){
+        var d = new Date(inicio); d.setDate(inicio.getDate()+i);
+        dias.push(fechaLocal(d));
+      }
+      var m = [0,0,0,0,0,0,0], l = [0,0,0,0,0,0,0];
+      r[0].forEach(function(doc){ var i = dias.indexOf(doc.data().fecha); if(i>=0) m[i]++; });
+      r[1].forEach(function(doc){ var i = dias.indexOf(doc.data().fecha); if(i>=0) l[i]++; });
+      return { fechas: dias, mensajes: m, llamadas: l };
+    }).catch(function(){
+      return { fechas: [], mensajes:[0,0,0,0,0,0,0], llamadas:[0,0,0,0,0,0,0] };
     });
   },
 
