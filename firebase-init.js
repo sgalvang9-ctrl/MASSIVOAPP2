@@ -288,11 +288,11 @@ window.LC = {
         llamadasSemana: d.llamadasSemana || 0,
         diasPiso: d.diasPiso || 6,
         porAttuid: d.porAttuid || {},   // cuotas individuales que pisan la general
-        kpis: d.kpis || { pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpuConEquipo:0, arpuSoloServicio:0 }
+        kpis: d.kpis || { pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpuConEquipo:0, arpuSoloServicio:0, arpuRenovaciones:0, citas:0, campanas:0, resenas:0 }
       };
     }).catch(function(){
       return { mensajesSemana:0, llamadasSemana:0, diasPiso:6, porAttuid:{},
-               kpis:{ pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpuConEquipo:0, arpuSoloServicio:0 } };
+               kpis:{ pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpuConEquipo:0, arpuSoloServicio:0, arpuRenovaciones:0, citas:0, campanas:0, resenas:0 } };
     });
   },
 
@@ -347,13 +347,23 @@ window.LC = {
 
   _kpisVacio: function(){
     return { pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0,
-             arpuConEquipo:0, arpuSoloServicio:0 };
+             arpuConEquipo:0, arpuSoloServicio:0, arpuRenovaciones:0,
+             citas:0, campanas:0, resenas:0, prospectosPos:0, prospectosRen:0,
+             efectivo:0, tarjeta:0 };
   },
 
   _sumarDocs: function(docs){
-    var t = window.LC._kpisVacio(), conEq = [], soloSrv = [];
+    var t = window.LC._kpisVacio(), conEq = [], soloSrv = [], renov = [];
     docs.forEach(function(d){
       var a = d.activos || {};
+      var c = d.crm || {}, pr = d.prospeccion || {}, cj = d.caja || {};
+      t.prospectosPos += Number(c.pos) || 0;
+      t.prospectosRen += Number(c.ren) || 0;
+      t.campanas      += Number(pr.campanas) || 0;
+      t.resenas       += Number(d.resenas) || 0;
+      t.efectivo      += Number(cj.efectivo) || 0;
+      t.tarjeta       += Number(cj.tarjeta) || 0;
+      t.citas         += (d.citasConfirmadas && d.citasConfirmadas.length) || 0;
       t.pospagoNuevo  += Number(a.pospagoNuevo)  || 0;
       t.pospagoPropio += Number(a.pospagoPropio) || 0;
       t.renovacion    += Number(a.renovacion)    || 0;
@@ -364,10 +374,12 @@ window.LC = {
       var n1 = Number(r.equipoNuevo) || 0;  if(n1 > 0) conEq.push(n1);
       // ARPU solo servicio = lo capturado en "equipo propio"
       var n2 = Number(r.equipoPropio) || 0; if(n2 > 0) soloSrv.push(n2);
+      var n3 = Number(r.renovaciones) || 0;  if(n3 > 0) renov.push(n3);
     });
     function prom(a){ return a.length ? Math.round(a.reduce(function(x,y){return x+y;},0)/a.length) : 0; }
-    t.arpuConEquipo    = prom(conEq);
-    t.arpuSoloServicio = prom(soloSrv);
+    t.arpuConEquipo     = prom(conEq);
+    t.arpuSoloServicio  = prom(soloSrv);
+    t.arpuRenovaciones  = prom(renov);
     return t;
   },
 
@@ -446,14 +458,14 @@ window.LC = {
       });
       // totales de tienda
       var tot = { mensajes:0, llamadas:0, activaciones:0,
-                  pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0 };
+                  pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0,
+                  citas:0, campanas:0, resenas:0, prospectosPos:0, prospectosRen:0,
+                  efectivo:0, tarjeta:0 };
       filas.forEach(function(f){
         tot.mensajes += f.mensajes; tot.llamadas += f.llamadas; tot.activaciones += f.activaciones;
-        tot.pospagoNuevo  += f.kpis.pospagoNuevo;
-        tot.pospagoPropio += f.kpis.pospagoPropio;
-        tot.renovacion    += f.kpis.renovacion;
-        tot.accesorios    += f.kpis.accesorios;
-        tot.seguros       += f.kpis.seguros;
+        ["pospagoNuevo","pospagoPropio","renovacion","accesorios","seguros",
+         "citas","campanas","resenas","prospectosPos","prospectosRen","efectivo","tarjeta"]
+          .forEach(function(k){ tot[k] += f.kpis[k] || 0; });
       });
       var conCierre = filas.filter(function(f){ return f.cierre !== null; });
       var promCierre = conCierre.length

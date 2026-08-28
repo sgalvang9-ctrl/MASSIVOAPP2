@@ -287,6 +287,14 @@
       </div>
       <div class="row2">
         <div><label>ARPU solo servicio ($)</label><input type="number" min="0" id="kArpuSoloServicio" placeholder="0"></div>
+        <div><label>ARPU renovaciones ($)</label><input type="number" min="0" id="kArpuRenovaciones" placeholder="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>Citas confirmadas</label><input type="number" min="0" id="kCitas" placeholder="0"></div>
+        <div><label>Campañas</label><input type="number" min="0" id="kCampanas" placeholder="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>Reseñas</label><input type="number" min="0" id="kResenas" placeholder="0"></div>
         <div></div>
       </div>
       <button class="btn" id="btnGuardarKpis">Guardar metas de venta</button>
@@ -489,7 +497,11 @@
     ["accesorios",    "Accesorios",     "🎧"],
     ["seguros",          "Seguros",            "🛡️"],
     ["arpuConEquipo",    "ARPU con equipo",    "💵"],
-    ["arpuSoloServicio", "ARPU solo servicio", "📶"]
+    ["arpuSoloServicio", "ARPU solo servicio", "📶"],
+    ["arpuRenovaciones", "ARPU renovaciones",  "♻️"],
+    ["citas",            "Citas confirmadas",  "📅"],
+    ["campanas",         "Campañas",           "📣"],
+    ["resenas",          "Reseñas",            "⭐"]
   ];
 
   function cargarMiVenta(){
@@ -630,6 +642,10 @@
     el("kSeguros").value       = mk.seguros       || "";
     el("kArpuConEquipo").value    = mk.arpuConEquipo    || "";
     el("kArpuSoloServicio").value = mk.arpuSoloServicio || "";
+    el("kArpuRenovaciones").value = mk.arpuRenovaciones || "";
+    el("kCitas").value    = mk.citas    || "";
+    el("kCampanas").value = mk.campanas || "";
+    el("kResenas").value  = mk.resenas  || "";
 
     el("btnGuardarKpis").addEventListener("click", function(){
       var btn = this;
@@ -641,7 +657,11 @@
         accesorios:    Number(el("kAccesorios").value)    || 0,
         seguros:       Number(el("kSeguros").value)       || 0,
         arpuConEquipo:    Number(el("kArpuConEquipo").value)    || 0,
-        arpuSoloServicio: Number(el("kArpuSoloServicio").value) || 0
+        arpuSoloServicio: Number(el("kArpuSoloServicio").value) || 0,
+        arpuRenovaciones: Number(el("kArpuRenovaciones").value) || 0,
+        citas:    Number(el("kCitas").value)    || 0,
+        campanas: Number(el("kCampanas").value) || 0,
+        resenas:  Number(el("kResenas").value)  || 0
       };
       LC.setCuotas({
         mensajesSemana: cuotas.mensajesSemana,

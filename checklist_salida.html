@@ -490,19 +490,6 @@ function buildDayPanel(dayIdx) {
       </div>
     </div>
 
-    <div class="section-grid">
-      <div class="card">
-        <div class="card-title">Yubikey</div>
-        <div class="field-row">
-          <div class="field"><label>Cantidad entregada</label><input type="number" min="0" id="${d}-yubikey-cantidad" placeholder="0" oninput="markDirty(${dayIdx});renderSummary()"></div>
-          <div class="field"><label>A quién</label><input type="text" id="${d}-yubikey-aquien" placeholder="Nombre" oninput="markDirty(${dayIdx})"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Cheque de salida</div>
-        <div class="toggle-row"><span class="toggle-label">¿Hubo cheque de salida?</span><label class="toggle"><input type="checkbox" id="${d}-cheque-salida" onchange="markDirty(${dayIdx});renderSummary()"><span class="slider"></span></label></div>
-      </div>
-    </div>
 
     <div class="card-full">
       <div class="card-title">Corte de Caja</div>
@@ -748,7 +735,7 @@ function renderSummary() {
   // Aggregate totals
   let totals = { pos:0, ren:0, campanas:0, llamadas:0, mensajes:0,
     resenas:0, actPospagoNuevo:0, actPospagoPropio:0, actRenovacion:0, actAccesorios:0, actSeguros:0,
-    arpuNuevo:0, arpuPropio:0, arpuRenovaciones:0, efectivo:0, tarjeta:0, yubikeys:0, chequesSi:0 };
+    arpuNuevo:0, arpuPropio:0, arpuRenovaciones:0, efectivo:0, tarjeta:0 };
 
   const rows = DAYS.map((d) => {
     const pos       = nv(`${d}-crm-pos`);
@@ -767,8 +754,6 @@ function renderSummary() {
     const arpuRenovaciones = nv(`${d}-arpu-renovaciones`);
     const efectivo  = nv(`${d}-total-efectivo`);
     const tarjeta   = nv(`${d}-total-tarjeta`);
-    const yubikeys  = nv(`${d}-yubikey-cantidad`);
-    const cheque    = document.getElementById(`${d}-cheque-salida`)?.checked || false;
 
     totals.pos+=pos; totals.ren+=ren; totals.campanas+=campanas;
     totals.llamadas+=llamadas; totals.mensajes+=mensajes;
@@ -777,10 +762,9 @@ function renderSummary() {
     totals.actRenovacion+=actRenovacion; totals.actAccesorios+=actAccesorios; totals.actSeguros+=actSeguros;
     totals.arpuNuevo+=arpuNuevo; totals.arpuPropio+=arpuPropio; totals.arpuRenovaciones+=arpuRenovaciones;
     totals.efectivo+=efectivo; totals.tarjeta+=tarjeta;
-    totals.yubikeys+=yubikeys; if (cheque) totals.chequesSi++;
 
     return { d, pos, ren, campanas, llamadas, mensajes,
-             resenas, actPospagoNuevo, actPospagoPropio, actRenovacion, actAccesorios, actSeguros, arpuNuevo, arpuPropio, arpuRenovaciones, efectivo, tarjeta, yubikeys, cheque };
+             resenas, actPospagoNuevo, actPospagoPropio, actRenovacion, actAccesorios, actSeguros, arpuNuevo, arpuPropio, arpuRenovaciones, efectivo, tarjeta };
   });
 
   const fmt = n => n.toLocaleString('es-MX');
@@ -931,24 +915,7 @@ function renderSummary() {
       </table>
     </div>
 
-    <div class="card-full">
-      <div class="summary-section-title">Yubikey y cheque de salida — por día</div>
-      <table class="summary-table">
-        <thead><tr><th>Día</th><th class="num-col">Yubikeys entregadas</th><th class="num-col">Cheque de salida</th></tr></thead>
-        <tbody>
-          ${rows.map(r=>`<tr>
-            <td class="day-col">${r.d}</td>
-            <td class="num-col">${r.yubikeys||'—'}</td>
-            <td class="num-col">${r.cheque?'✔ Sí':'—'}</td>
-          </tr>`).join('')}
-          <tr class="total-row">
-            <td><strong>TOTAL</strong></td>
-            <td class="num-col">${totals.yubikeys}</td>
-            <td class="num-col">${totals.chequesSi} día(s)</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>`;
+    `;
 }
 
 // ── TABS ────────────────────────────────────────────────────────
@@ -1130,11 +1097,6 @@ function recolectarDatosDia(d) {
       equipoPropio: document.getElementById(`${d}-arpu-equipopropio`)?.value || '',
       renovaciones: document.getElementById(`${d}-arpu-renovaciones`)?.value || ''
     },
-    yubikey: {
-      cantidad: document.getElementById(`${d}-yubikey-cantidad`)?.value || '',
-      aQuien: document.getElementById(`${d}-yubikey-aquien`)?.value || ''
-    },
-    chequeSalida: document.getElementById(`${d}-cheque-salida`)?.checked || false,
     caja: {
       efectivo: document.getElementById(`${d}-total-efectivo`)?.value || '',
       tarjeta: document.getElementById(`${d}-total-tarjeta`)?.value || ''
@@ -1161,10 +1123,6 @@ function rellenarDatosDia(d, dayIdx, datos) {
   setVal(`${d}-arpu-equiponuevo`, datos.arpu?.equipoNuevo);
   setVal(`${d}-arpu-equipopropio`, datos.arpu?.equipoPropio);
   setVal(`${d}-arpu-renovaciones`, datos.arpu?.renovaciones);
-  setVal(`${d}-yubikey-cantidad`, datos.yubikey?.cantidad);
-  setVal(`${d}-yubikey-aquien`, datos.yubikey?.aQuien);
-  const cheque = document.getElementById(`${d}-cheque-salida`);
-  if (cheque) cheque.checked = !!datos.chequeSalida;
   setVal(`${d}-total-efectivo`, datos.caja?.efectivo);
   setVal(`${d}-total-tarjeta`, datos.caja?.tarjeta);
 
@@ -1357,15 +1315,6 @@ function buildDayBlockHTML(d) {
         <div class="rpt-section"><div class="rpt-section-title">Corte de Caja</div>
           ${corteRows.length?`<table class="rpt-table"><thead><tr><th>Corte</th><th>Cantidad</th><th>Entregado a</th><th>Recibo</th></tr></thead><tbody>${corteRows.map(r=>`<tr><td>${r.num||'—'}</td><td>${fmtMoney(r.cant)}</td><td>${r.entregado||'—'}</td><td>${r.recibo||'—'}</td></tr>`).join('')}<tr class="rpt-total-row"><td colspan="4" style="padding:6px;font-size:11px">Efectivo: <strong>${fmtMoney(gv(d+'-total-efectivo'))}</strong> | Tarjeta: <strong>${fmtMoney(gv(d+'-total-tarjeta'))}</strong></td></tr></tbody></table>`:
           `<div class="rpt-kv"><span class="rpt-k">Efectivo</span><span class="rpt-v">${fmtMoney(gv(d+'-total-efectivo'))}</span></div><div class="rpt-kv"><span class="rpt-k">Tarjeta</span><span class="rpt-v">${fmtMoney(gv(d+'-total-tarjeta'))}</span></div>`}
-        </div>
-      </div>
-      <div class="rpt-grid">
-        <div class="rpt-section"><div class="rpt-section-title">Yubikey</div>
-          <div class="rpt-kv"><span class="rpt-k">Cantidad entregada</span><span class="rpt-v">${fmtNum(gv(d+'-yubikey-cantidad'))}</span></div>
-          <div class="rpt-kv"><span class="rpt-k">A quién</span><span class="rpt-v" style="font-family:inherit;font-weight:600">${gv(d+'-yubikey-aquien')||'—'}</span></div>
-        </div>
-        <div class="rpt-section"><div class="rpt-section-title">Cheque de salida</div>
-          <div class="rpt-kv"><span class="rpt-k">¿Hubo cheque de salida?</span><span class="rpt-v">${gv(d+'-cheque-salida')==='✔'?'Sí':'No'}</span></div>
         </div>
       </div>
     </div>`;

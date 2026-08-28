@@ -234,8 +234,14 @@
         </div>
       </div>
       <div id="alertasTienda"></div>
-      <div class="sec"><h2>KPIs de la tienda</h2><span class="hint">semana en curso</span></div>
+      <div class="sec"><h2>Venta de la tienda</h2><span class="hint">contra meta</span></div>
       <div class="card" id="kpisTienda"><div class="vacio">Cargando…</div></div>
+
+      <div class="sec"><h2>Actividad comercial</h2><span class="hint">CRM y citas</span></div>
+      <div class="card" id="actTienda"><div class="vacio">Cargando…</div></div>
+
+      <div class="sec"><h2>Corte de caja</h2><span class="hint">acumulado de la semana</span></div>
+      <div class="card" id="cajaTienda"><div class="vacio">Cargando…</div></div>
     </div>
 
     <!-- EQUIPO -->
@@ -274,6 +280,10 @@
   var KPIS = [
     ["pospagoNuevo","Pospago nuevo","📱"],["pospagoPropio","Pospago propio","🔄"],
     ["renovacion","Renovación","♻️"],["accesorios","Accesorios","🎧"],["seguros","Seguros","🛡️"]
+  ];
+  // KPIs de actividad comercial (sin meta obligatoria)
+  var KPIS_ACT = [
+    ["citas","Citas confirmadas","📅"],["campanas","Campañas","📣"],["resenas","Reseñas","⭐"]
   ];
 
   function esSemanaActual(){ return semanaActual === LC.lunesDeLaSemana(); }
@@ -316,6 +326,12 @@
         '<div class="wk-bar"><i style="width:'+(pct===null?0:Math.min(pct,100))+'%;background:'+gradPct(pct)+'"></i></div></div>'+
       '<div class="wk-num" style="color:'+colorPct(pct)+'">'+v+m+
         '<small>'+(pct===null?"sin meta":pct+"%")+'</small></div></div>';
+  }
+
+  // promedio de un ARPU entre quienes sí lo capturaron
+  function promArpu(campo){
+    var vals = datos.filas.map(function(f){ return f.kpis[campo] || 0; }).filter(function(v){ return v > 0; });
+    return vals.length ? Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length) : 0;
   }
 
   // ── VISTA 1: TIENDA ──
@@ -363,9 +379,27 @@
     var html = KPIS.map(function(k){
       return filaKpi(k[1], k[2], t[k[0]], (Number(mk[k[0]])||0) * n, false);
     }).join("");
-    html += filaKpi("Mensajes", "📲", t.mensajes, (Number(cuotas.mensajesSemana)||0)*n, false);
-    html += filaKpi("Llamadas", "📞", t.llamadas, (Number(cuotas.llamadasSemana)||0)*n, false);
+    html += filaKpi("ARPU con equipo", "💵", promArpu("arpuConEquipo"), Number(mk.arpuConEquipo)||0, true);
+    html += filaKpi("ARPU solo servicio", "📶", promArpu("arpuSoloServicio"), Number(mk.arpuSoloServicio)||0, true);
+    html += filaKpi("ARPU renovaciones", "♻️", promArpu("arpuRenovaciones"), Number(mk.arpuRenovaciones)||0, true);
     el("kpisTienda").innerHTML = html;
+
+    var act = KPIS_ACT.map(function(k){
+      return filaKpi(k[1], k[2], t[k[0]], (Number(mk[k[0]])||0) * n, false);
+    }).join("");
+    act += filaKpi("Prospectos POS", "🆕", t.prospectosPos, 0, false);
+    act += filaKpi("Prospectos REN", "🔁", t.prospectosRen, 0, false);
+    act += filaKpi("Mensajes", "📲", t.mensajes, (Number(cuotas.mensajesSemana)||0)*n, false);
+    act += filaKpi("Llamadas", "📞", t.llamadas, (Number(cuotas.llamadasSemana)||0)*n, false);
+    el("actTienda").innerHTML = act;
+
+    var totalCaja = t.efectivo + t.tarjeta;
+    el("cajaTienda").innerHTML =
+      filaKpi("Efectivo", "💴", t.efectivo, 0, true) +
+      filaKpi("Tarjeta", "💳", t.tarjeta, 0, true) +
+      '<div class="wk-row" style="border-top:1.5px solid var(--line);margin-top:4px;padding-top:13px;">' +
+        '<div class="wk-ico">🧾</div><div class="wk-info"><div class="wk-name" style="font-weight:700">Total de la semana</div></div>' +
+        '<div class="wk-num" style="font-size:15px;color:var(--navy)">$' + totalCaja.toLocaleString("es-MX") + '</div></div>';
   }
 
   // ── VISTA 2: EQUIPO ──
@@ -453,6 +487,18 @@
     html += KPIS.map(function(k){ return filaKpi(k[1], k[2], f.kpis[k[0]], Number(mk[k[0]])||0, false); }).join("");
     html += filaKpi("ARPU con equipo", "💵", f.kpis.arpuConEquipo, Number(mk.arpuConEquipo)||0, true);
     html += filaKpi("ARPU solo servicio", "📶", f.kpis.arpuSoloServicio, Number(mk.arpuSoloServicio)||0, true);
+    html += filaKpi("ARPU renovaciones", "♻️", f.kpis.arpuRenovaciones, Number(mk.arpuRenovaciones)||0, true);
+    html += '</div>';
+
+    html += '<div class="sec"><h2>Su actividad comercial</h2><span class="hint">CRM, citas y caja</span></div><div class="card">';
+    html += KPIS_ACT.map(function(k){ return filaKpi(k[1], k[2], f.kpis[k[0]], Number(mk[k[0]])||0, false); }).join("");
+    html += filaKpi("Prospectos POS", "🆕", f.kpis.prospectosPos, 0, false);
+    html += filaKpi("Prospectos REN", "🔁", f.kpis.prospectosRen, 0, false);
+    html += filaKpi("Caja de la semana", "🧾", f.kpis.efectivo + f.kpis.tarjeta, 0, true);
+    html += '<div class="wk-row"><div class="wk-ico">📆</div>' +
+      '<div class="wk-info"><div class="wk-name">Días en cero</div></div>' +
+      '<div class="wk-num" style="color:' + (f.diasEnCero === 0 ? 'var(--good)' : (f.diasEnCero <= 1 ? 'var(--warn)' : 'var(--bad)')) + '">' +
+      f.diasEnCero + '</div></div>';
     html += '</div>';
     el("detalleContenido").innerHTML = html;
 
