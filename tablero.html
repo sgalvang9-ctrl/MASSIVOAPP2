@@ -154,6 +154,22 @@
   .semlbl span{display:block;font-family:var(--fd);font-size:13px;font-weight:700;}
   .semlbl small{display:block;font-size:9.5px;color:var(--ink-faint);text-transform:uppercase;
     letter-spacing:.06em;font-weight:600;margin-top:1px;}
+  .esp-top{display:flex;align-items:baseline;gap:12px;margin-bottom:4px;}
+  .esp-num{font-family:var(--fd);font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1;}
+  .esp-cap{font-size:12.5px;color:var(--ink-dim);}
+  .esp-barra{position:relative;height:8px;border-radius:5px;background:var(--paper);margin:14px 0 6px;}
+  .esp-barra i{display:block;height:100%;border-radius:5px;}
+  .esp-marca{position:absolute;top:-4px;width:2px;height:16px;background:var(--ink-dim);border-radius:1px;}
+  .esp-pie{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-faint);
+    font-family:var(--fn);font-weight:600;}
+  .esp-msg{background:var(--paper);border-left:3px solid var(--cyan);border-radius:9px;
+    padding:12px 13px;font-size:12.5px;line-height:1.55;margin-top:13px;}
+  .esp-msg b{font-weight:700;color:var(--ink);}
+  .esp-mini{display:flex;gap:10px;margin-top:13px;padding-top:13px;border-top:1px solid var(--line);}
+  .esp-mini div{flex:1;text-align:center;}
+  .esp-mini .n{font-family:var(--fn);font-size:17px;font-weight:700;color:var(--navy);}
+  .esp-mini .t{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);
+    font-weight:600;margin-top:2px;}
   .hidden{display:none!important;}
   .vacio{text-align:center;padding:24px 10px;color:var(--ink-faint);font-size:13px;}
   @media(max-width:400px){ .ring{width:104px;height:104px;} .herotxt h1{font-size:18.5px;} .gap .big{font-size:27px;} }
@@ -246,6 +262,9 @@
     <div class="vacio" id="ventaVacio">Cargando…</div>
     <div id="listaVenta"></div>
   </div>
+
+  <div class="sec"><h2>Cómo vas</h2><span class="hint">tu conversión</span></div>
+  <div class="card" id="cardEspejo"><div class="vacio">Cargando…</div></div>
 
   <div class="sec"><h2>Equipo</h2><span class="hint">semana en curso</span></div>
   <div class="card">
@@ -443,6 +462,64 @@
       fila("M", totM, metaM);
       fila("L", totL, metaL);
     }).catch(function(){});
+  }
+
+  function cargarEspejo(){
+    return LC.miEspejo(perfil.attuid, semanaVista).then(function(e){
+      if(!e){ el("cardEspejo").innerHTML = '<div class="vacio">Sin datos esta semana.</div>'; return; }
+      var m = e.mios, prom = e.promedioCierre;
+
+      if(m.cierre === null){
+        el("cardEspejo").innerHTML = '<div class="vacio">Todavía no tienes actividad esta semana.</div>';
+        return;
+      }
+
+      var pos = prom !== null && prom > 0 ? Math.min(m.cierre / (prom * 1.6) * 100, 100) : 50;
+      var posProm = prom !== null && prom > 0 ? Math.min(100 / 1.6, 100) : 50;
+      var color = prom === null ? "var(--cyan)"
+        : (m.cierre >= prom ? "linear-gradient(90deg,#12a058,#5fd39a)"
+                            : "linear-gradient(90deg,#00b6f1,#4dcdf7)");
+
+      // lectura en palabras según su caso
+      var msg;
+      var contactosAlto = e.promedioContactos > 0 && m.contactos >= e.promedioContactos;
+      if(prom === null){
+        msg = "<b>Tu tasa de cierre es " + m.cierre + "%.</b> De cada 100 personas que contactas, cierras " +
+              Math.round(m.cierre) + ".";
+      }else if(m.cierre >= prom && contactosAlto){
+        msg = "<b>Vas muy bien.</b> Contactas por encima del equipo y además cierras mejor que el promedio. " +
+              "Mantén el ritmo.";
+      }else if(m.cierre >= prom && !contactosAlto){
+        msg = "<b>Cierras muy bien lo que contactas.</b> Tu conversión está arriba del promedio — " +
+              "si subes el volumen de contactos, la venta sube contigo.";
+      }else if(contactosAlto){
+        msg = "<b>Estás contactando bien.</b> Tu volumen está por encima del equipo, pero cierras un poco " +
+              "menos que el promedio. El margen está en la conversación, no en el esfuerzo.";
+      }else{
+        msg = "<b>Hay espacio en los dos frentes.</b> Estás por debajo del equipo en contactos y en " +
+              "conversión. Empieza por el volumen: más contactos, más oportunidades de cerrar.";
+      }
+
+      el("cardEspejo").innerHTML =
+        '<div class="esp-top"><div class="esp-num" style="color:' +
+          (prom !== null && m.cierre >= prom ? "var(--good)" : "var(--navy)") + '">' + m.cierre + '%</div>' +
+          '<div class="esp-cap">tu tasa de cierre</div></div>' +
+        '<div class="esp-barra"><i style="width:' + pos + '%;background:' + color + '"></i>' +
+          (prom !== null ? '<div class="esp-marca" style="left:' + posProm + '%"></div>' : '') +
+        '</div>' +
+        '<div class="esp-pie"><span>tú ' + m.cierre + '%</span>' +
+          (prom !== null ? '<span>promedio del equipo ' + prom + '%</span>' : '<span>—</span>') + '</div>' +
+        '<div class="esp-msg">' + msg + '</div>' +
+        '<div class="esp-mini">' +
+          '<div><div class="n">' + m.contactos + '</div><div class="t">Contactos</div></div>' +
+          '<div><div class="n">' + m.activaciones + '</div><div class="t">Activaciones</div></div>' +
+          '<div><div class="n" style="color:' +
+            (m.diasEnCero === 0 ? "var(--good)" : (m.diasEnCero <= 1 ? "var(--warn)" : "var(--bad)")) + '">' +
+            m.diasEnCero + '</div><div class="t">Días en cero</div></div>' +
+        '</div>';
+    }).catch(function(){
+      el("cardEspejo").innerHTML = '<div class="vacio">No se pudo cargar.</div>';
+    });
   }
 
   function cargarRanking(){
@@ -699,7 +776,7 @@
 
   function irSemana(delta){
     semanaVista = LC.sumarSemanas(semanaVista, delta);
-    Promise.all([cargarMiSemana(), cargarRanking(), cargarMiVenta()]);
+    Promise.all([cargarMiSemana(), cargarRanking(), cargarMiVenta(), cargarEspejo()]);
   }
   el("semPrev").addEventListener("click", function(){ irSemana(-1); });
   el("semNext").addEventListener("click", function(){ if(!esSemanaActual()) irSemana(1); });
@@ -727,7 +804,7 @@
         cuotas = c;
         if(!c.mensajesSemana && !c.llamadasSemana) el("avisoSinCuota").classList.remove("hidden");
         zonaGerente();
-        return Promise.all([cargarMiDia(), cargarMiSemana(), cargarRanking(), cargarMiVenta(), cargarVentaEquipo()]);
+        return Promise.all([cargarMiDia(), cargarMiSemana(), cargarRanking(), cargarMiVenta(), cargarVentaEquipo(), cargarEspejo()]);
       });
     });
   }

@@ -475,6 +475,77 @@ window.LC = {
     });
   },
 
+  // Agregados del equipo (solo promedios, sin datos de nadie en particular).
+  // Los escribe el gerente al abrir Gerencia; los lee todo el equipo.
+  guardarAgregados: function(semana, ag){
+    return LCDb.collection("config").doc("agregados_" + semana).set({
+      semana: semana,
+      promedioCierre: (ag.promedioCierre === null || ag.promedioCierre === undefined) ? null : Number(ag.promedioCierre),
+      promedioContactos: Number(ag.promedioContactos) || 0,
+      promedioActivaciones: Number(ag.promedioActivaciones) || 0,
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true}).catch(function(){});
+  },
+
+  getAgregados: function(semana){
+    return LCDb.collection("config").doc("agregados_" + semana).get().then(function(doc){
+      return doc.exists ? doc.data() : null;
+    }).catch(function(){ return null; });
+  },
+
+  // Espejo del ejecutivo: sus propios números + el promedio del equipo como
+  // referencia, SIN exponer datos individuales de nadie más.
+  miEspejo: function(attuid, semana){
+    return Promise.all([
+      window.LC.contarActividadSemana(semana),
+      window.LC.kpisSemana(attuid, semana),
+      window.LC.actividadEquipoPorDia(semana),
+      window.LC.listarEquipo(),
+      window.LC.getAgregados(semana)
+    ]).then(function(r){
+      var act = r[0] || {}, misKpis = r[1] || window.LC._kpisVacio();
+      var porDia = r[2] || {}, equipo = (r[3] || []).filter(function(p){
+        return (p.rol || "ejecutivo") !== "gerente";
+      });
+      var msj = act.mensajesPorAttuid || {}, llm = act.llamadasPorAttuid || {};
+
+      var mios = { mensajes: msj[attuid] || 0, llamadas: llm[attuid] || 0 };
+      mios.contactos = mios.mensajes + mios.llamadas;
+      mios.activaciones = misKpis.pospagoNuevo + misKpis.pospagoPropio + misKpis.renovacion;
+      mios.cierre = mios.contactos > 0
+        ? Math.round(mios.activaciones / mios.contactos * 1000) / 10 : null;
+
+      // promedios del equipo — solo agregados, nunca por persona
+      var contactosEq = [], sumaContactos = 0;
+      equipo.forEach(function(p){
+        var c = (msj[p.attuid]||0) + (llm[p.attuid]||0);
+        sumaContactos += c;
+        if(c > 0) contactosEq.push(c);
+      });
+      var promContactos = contactosEq.length
+        ? Math.round(sumaContactos / contactosEq.length) : 0;
+
+      // días en cero propios
+      var inicio = new Date(semana + "T00:00:00");
+      var hoy = new Date(); hoy.setHours(0,0,0,0);
+      var conAct = porDia[attuid] || {}, cero = 0;
+      for(var i=0;i<7;i++){
+        var d = new Date(inicio); d.setDate(inicio.getDate()+i);
+        if(d > hoy) break;
+        if(!conAct[fechaLocal(d)]) cero++;
+      }
+      mios.diasEnCero = cero;
+      mios.kpis = misKpis;
+
+      var ag = r[4] || {};
+      return {
+        mios: mios,
+        promedioContactos: promContactos,
+        promedioCierre: (ag.promedioCierre === undefined) ? null : ag.promedioCierre
+      };
+    }).catch(function(){ return null; });
+  },
+
   // Lista de todo el equipo (para el ranking), desde la lista blanca
   listarEquipo: function(){
     return LCDb.collection("attuidsAutorizados").get().then(function(snap){

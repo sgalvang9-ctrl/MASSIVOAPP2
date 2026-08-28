@@ -312,6 +312,14 @@
     el("detalleContenido").innerHTML = '<div class="vacio">Toca a un ejecutivo en la pestaña "Mi equipo".</div>';
     return LC.resumenEquipo(sem).then(function(r){
       datos = r; pintarTienda(); pintarEquipo();
+      // publicar solo los promedios, para que cada ejecutivo se compare sin ver a nadie
+      var activs = datos.filas.map(function(f){ return f.activaciones; });
+      var conts  = datos.filas.map(function(f){ return f.contactos; }).filter(function(c){ return c > 0; });
+      LC.guardarAgregados(sem, {
+        promedioCierre: datos.promedioCierre,
+        promedioContactos: conts.length ? Math.round(conts.reduce(function(a,b){return a+b;},0)/conts.length) : 0,
+        promedioActivaciones: activs.length ? Math.round(activs.reduce(function(a,b){return a+b;},0)/activs.length) : 0
+      });
     }).catch(function(){
       el("kpisTienda").innerHTML = '<div class="vacio">No se pudieron cargar los datos.</div>';
     });
