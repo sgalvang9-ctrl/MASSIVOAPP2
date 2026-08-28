@@ -206,6 +206,29 @@ if (typeof XLSX === "undefined") {
   .pill-toggle button.active{background:var(--navy);color:#fff;box-shadow:0 3px 8px -3px rgba(11,37,69,.45);}
   .empty{text-align:center;padding:36px 10px;color:var(--ink-faint);font-size:13.5px;}
   footer{max-width:640px;margin:24px auto 0;padding:0 18px;font-size:11.5px;color:var(--ink-faint);line-height:1.65;text-align:center;}
+  .segbtn{flex:1;padding:9px 4px;border-radius:var(--radius-sm);border:1.5px solid #f0c98a;background:#fffaf0;
+    font-size:11.5px;font-weight:700;cursor:pointer;color:#b8790a;transition:.15s;}
+  .segbtn:hover{background:#fdf1de;}
+  .segbtn.activo{background:linear-gradient(135deg,#f6c453,#e8a33d);color:#4a2f00;border-color:#e8a33d;}
+  .segpanel{width:100%;margin-top:10px;padding:12px;background:var(--paper);border:1px solid var(--line);
+    border-radius:var(--radius-sm);}
+  .segpanel .tit{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--ink-dim);margin-bottom:8px;}
+  .etqs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px;}
+  .etq{padding:6px 11px;border-radius:999px;border:1.5px solid var(--line);background:#fff;
+    font-size:11.5px;font-weight:600;cursor:pointer;color:var(--ink-dim);}
+  .etq.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .segpanel textarea{width:100%;border:1.5px solid var(--line);border-radius:8px;padding:9px 10px;
+    font-size:13.5px;font-family:var(--font-body);resize:vertical;min-height:56px;background:#fff;}
+  .segpanel textarea:focus{outline:none;border-color:var(--cyan);}
+  .segacc{display:flex;gap:7px;margin-top:9px;}
+  .segacc button{flex:1;padding:10px;border-radius:8px;border:none;font-size:12.5px;font-weight:700;
+    cursor:pointer;font-family:var(--font-body);}
+  .segGuardar{background:linear-gradient(135deg,var(--cyan-soft),var(--cyan));color:#042a3d;}
+  .segCancel{background:#fff;border:1.5px solid var(--line)!important;color:var(--ink-dim);}
+  .notaprev{background:#fff8e6;border:1px solid #f0d9a0;border-radius:8px;padding:9px 11px;
+    font-size:12px;color:#6b4708;margin-top:8px;line-height:1.45;width:100%;}
+  .notaprev b{font-weight:700;}
   .hidden{display:none !important;}
   #fileInput{display:none;}
   button:focus-visible, .filebox:focus-visible, .storepill:focus-visible{
@@ -328,6 +351,8 @@ if (typeof XLSX === "undefined") {
   var contacts = [];
   var cleanStats = {validos:0, duplicados:0, invalidos:0};
   var filtroActual = "pendientes";
+  var ETIQUETAS = ["Volver a llamar","Pidió info","No interesado","Ya tiene equipo","Cita agendada"];
+  var notasCache = {};   // phone -> seguimiento guardado
 
   function nsKey(base){
     var slug = (config.tienda || "default").toLowerCase().replace(/[^a-z0-9]+/g,"-");
@@ -609,10 +634,90 @@ if (typeof XLSX === "undefined") {
       });
       item.appendChild(resRow);
 
+      // ── seguimiento: marcar potencial y dejar nota ──
+      var nota = notasCache[c.phone];
+      if(nota && nota.estado === "potencial"){
+        var prev = document.createElement("div");
+        prev.className = "notaprev";
+        prev.innerHTML = "⭐ <b>Cliente potencial</b>" +
+          (nota.etiqueta ? " · " + esc(nota.etiqueta) : "") +
+          (nota.comentario ? "<br>" + esc(nota.comentario) : "") +
+          "<br><span style='opacity:.7'>último contacto: " + esc(nota.ultimoContacto || "—") + "</span>";
+        item.appendChild(prev);
+      }
+
+      var segRow = document.createElement("div");
+      segRow.className = "resultado-row";
+      var btnSeg = document.createElement("button");
+      btnSeg.className = "segbtn" + (nota && nota.estado === "potencial" ? " activo" : "");
+      btnSeg.textContent = (nota && nota.estado === "potencial") ? "⭐ Editar seguimiento" : "⭐ Marcar como potencial";
+      btnSeg.addEventListener("click", function(){ abrirPanelSeguimiento(item, c, nota); });
+      segRow.appendChild(btnSeg);
+      item.appendChild(segRow);
+
       listEl.appendChild(item);
     });
 
     updateStats();
+  }
+
+  // ── panel de seguimiento ──
+  function abrirPanelSeguimiento(item, c, nota){
+    if(item.querySelector(".segpanel")) return;   // ya abierto
+    nota = nota || {};
+    var p = document.createElement("div");
+    p.className = "segpanel";
+    p.innerHTML =
+      '<div class="tit">Seguimiento de ' + esc(c.name || c.phone) + '</div>' +
+      '<div class="etqs">' + ETIQUETAS.map(function(e){
+        return '<button type="button" class="etq' + (nota.etiqueta === e ? " on" : "") + '">' + esc(e) + '</button>';
+      }).join("") + '</div>' +
+      '<textarea placeholder="Nota (opcional): qué te dijo, cuándo volver…">' + esc(nota.comentario || "") + '</textarea>' +
+      '<div class="segacc">' +
+        '<button type="button" class="segGuardar">Guardar</button>' +
+        (nota.estado === "potencial" ? '<button type="button" class="segVendido">✅ Vendido</button>' +
+                                       '<button type="button" class="segDescartar">Descartar</button>' : '') +
+        '<button type="button" class="segCancel">Cancelar</button>' +
+      '</div>';
+    item.appendChild(p);
+
+    var elegida = nota.etiqueta || "";
+    Array.prototype.forEach.call(p.querySelectorAll(".etq"), function(b){
+      b.addEventListener("click", function(){
+        Array.prototype.forEach.call(p.querySelectorAll(".etq"), function(x){ x.classList.remove("on"); });
+        if(elegida === b.textContent){ elegida = ""; }
+        else { elegida = b.textContent; b.classList.add("on"); }
+      });
+    });
+
+    p.querySelector(".segCancel").addEventListener("click", function(){ p.remove(); });
+
+    p.querySelector(".segGuardar").addEventListener("click", function(){
+      var btn = this; btn.disabled = true; btn.textContent = "Guardando…";
+      LC.guardarSeguimiento(config, {
+        phone: c.phone, nombre: c.name || "",
+        etiqueta: elegida, comentario: p.querySelector("textarea").value.trim(),
+        estado: "potencial", origen: "lista"
+      }).then(function(){
+        notasCache[c.phone] = { estado:"potencial", etiqueta:elegida,
+          comentario:p.querySelector("textarea").value.trim(), ultimoContacto:"hoy" };
+        p.remove(); renderQueue();
+      }).catch(function(err){
+        alert("No se pudo guardar: " + (err && err.message ? err.message : err));
+        btn.disabled = false; btn.textContent = "Guardar";
+      });
+    });
+
+    function cerrar(estado, txt){
+      var b = p.querySelector(txt); if(!b) return;
+      b.addEventListener("click", function(){
+        LC.cerrarSeguimiento(c.phone, estado).then(function(){
+          delete notasCache[c.phone]; p.remove(); renderQueue();
+        }).catch(function(){});
+      });
+    }
+    cerrar("vendido", ".segVendido");
+    cerrar("descartado", ".segDescartar");
   }
 
   function updateStats(){
@@ -670,6 +775,10 @@ if (typeof XLSX === "undefined") {
         saveJSON(STORAGE_PREFIX + "config", config);
         T("4·config lista");
         showApp();
+        LC.misSeguimientos().then(function(lista){
+          lista.forEach(function(x){ notasCache[x.phone] = x; });
+          renderQueue();
+        }).catch(function(){});
         T("5·app mostrada OK");
       }catch(e){
         T("ERROR: " + (e && e.message ? e.message : e));

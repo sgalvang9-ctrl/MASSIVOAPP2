@@ -249,6 +249,8 @@
       <div class="sec"><h2>Mi equipo</h2><span class="hint">toca a alguien para ver su detalle</span></div>
       <div class="card scroll" id="tablaEquipo"><div class="vacio">Cargando…</div></div>
       <div id="alertasEquipo"></div>
+      <div class="sec"><h2>Clientes potenciales</h2><span class="hint" id="hintPot">—</span></div>
+      <div class="card" id="potEquipo"><div class="vacio">Cargando…</div></div>
     </div>
 
     <!-- DETALLE -->
@@ -311,7 +313,7 @@
     el("alertasTienda").innerHTML = ""; el("alertasEquipo").innerHTML = "";
     el("detalleContenido").innerHTML = '<div class="vacio">Toca a un ejecutivo en la pestaña "Mi equipo".</div>';
     return LC.resumenEquipo(sem).then(function(r){
-      datos = r; pintarTienda(); pintarEquipo();
+      datos = r; pintarTienda(); pintarEquipo(); cargarPotenciales();
       // publicar solo los promedios, para que cada ejecutivo se compare sin ver a nadie
       var activs = datos.filas.map(function(f){ return f.activaciones; });
       var conts  = datos.filas.map(function(f){ return f.contactos; }).filter(function(c){ return c > 0; });
@@ -462,6 +464,42 @@
         f.contactos + ' contactos en la semana.</div>');
     });
     el("alertasEquipo").innerHTML = av.join("");
+  }
+
+  function cargarPotenciales(){
+    return LC.seguimientosEquipo().then(function(lista){
+      if(!lista.length){
+        el("hintPot").textContent = "ninguno";
+        el("potEquipo").innerHTML = '<div class="vacio">Nadie tiene clientes en seguimiento.</div>';
+        return;
+      }
+      function dias(f){
+        if(!f) return 999;
+        var a = new Date(f + "T00:00:00"), b = new Date(); b.setHours(0,0,0,0);
+        return Math.round((b-a)/86400000);
+      }
+      lista.forEach(function(x){ x._d = dias(x.ultimoContacto); });
+      lista.sort(function(a,b){ return b._d - a._d; });
+      var frios = lista.filter(function(x){ return x._d >= 3; }).length;
+      el("hintPot").textContent = lista.length + " abiertos" + (frios ? " · " + frios + " enfriándose" : "");
+
+      el("potEquipo").innerHTML = lista.map(function(x){
+        var col = x._d >= 3 ? "var(--bad)" : (x._d >= 2 ? "var(--warn)" : "var(--good)");
+        var txt = x._d === 0 ? "hoy" : (x._d === 1 ? "ayer" : "hace " + x._d + " días");
+        return '<div class="rk">' +
+          '<div class="av">' + esc(ini(x.ejecutivo || x.attuid)) + '</div>' +
+          '<div class="rk-info">' +
+            '<div class="rk-name">' + esc(x.nombre || x.phone) + '</div>' +
+            '<div class="rk-sub">' + esc(x.ejecutivo || x.attuid) +
+              (x.etiqueta ? " · " + esc(x.etiqueta) : "") + '</div>' +
+            (x.comentario ? '<div class="rk-sub" style="color:var(--ink-dim)">' + esc(x.comentario) + '</div>' : '') +
+          '</div>' +
+          '<div class="rk-pct" style="color:' + col + ';font-size:11px">' + txt + '</div>' +
+        '</div>';
+      }).join("");
+    }).catch(function(){
+      el("potEquipo").innerHTML = '<div class="vacio">No se pudieron cargar.</div>';
+    });
   }
 
   // ── VISTA 3: DETALLE ──

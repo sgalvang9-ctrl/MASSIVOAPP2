@@ -170,6 +170,21 @@
   .esp-mini .n{font-family:var(--fn);font-size:17px;font-weight:700;color:var(--navy);}
   .esp-mini .t{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);
     font-weight:600;margin-top:2px;}
+  .pend{display:flex;align-items:flex-start;gap:11px;padding:12px 2px;border-bottom:1px solid var(--line);}
+  .pend:last-child{border-bottom:none;}
+  .pend .ico{flex:none;width:34px;height:34px;border-radius:11px;display:flex;align-items:center;
+    justify-content:center;font-size:15px;}
+  .pend.frio .ico{background:#fdecec;} .pend.tibio .ico{background:#fdf2df;} .pend.hoy .ico{background:var(--cyan-dim);}
+  .pend .in{flex:1;min-width:0;}
+  .pend .nm{font-size:13.5px;font-weight:600;}
+  .pend .tel{font-family:var(--fn);font-size:11.5px;color:var(--ink-faint);margin-top:1px;}
+  .pend .et{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:6px;font-size:10.5px;
+    font-weight:700;background:var(--paper);color:var(--ink-dim);}
+  .pend .co{font-size:12px;color:var(--ink-dim);margin-top:5px;line-height:1.45;}
+  .pend .dias{flex:none;text-align:right;font-family:var(--fn);font-size:11px;font-weight:700;}
+  .pend .llamar{display:inline-flex;align-items:center;justify-content:center;margin-top:6px;
+    background:linear-gradient(135deg,#25d366,#1ea94c);color:#fff;border-radius:9px;
+    padding:7px 13px;font-size:12px;font-weight:700;text-decoration:none;}
   .hidden{display:none!important;}
   .vacio{text-align:center;padding:24px 10px;color:var(--ink-faint);font-size:13px;}
   @media(max-width:400px){ .ring{width:104px;height:104px;} .herotxt h1{font-size:18.5px;} .gap .big{font-size:27px;} }
@@ -261,6 +276,11 @@
   <div class="card" id="cardVenta">
     <div class="vacio" id="ventaVacio">Cargando…</div>
     <div id="listaVenta"></div>
+  </div>
+
+  <div id="zonaPendientes" class="hidden">
+    <div class="sec"><h2>No los dejes enfriar</h2><span class="hint" id="hintPend">—</span></div>
+    <div class="card" id="cardPendientes"></div>
   </div>
 
   <div class="sec"><h2>Cómo vas</h2><span class="hint">tu conversión</span></div>
@@ -462,6 +482,52 @@
       fila("M", totM, metaM);
       fila("L", totL, metaL);
     }).catch(function(){});
+  }
+
+  function diasDesde(fechaISO){
+    if(!fechaISO) return 999;
+    var a = new Date(fechaISO + "T00:00:00"), b = new Date(); b.setHours(0,0,0,0);
+    return Math.round((b - a) / 86400000);
+  }
+
+  function cargarPendientes(){
+    return LC.misSeguimientos().then(function(lista){
+      if(!lista.length){ el("zonaPendientes").classList.add("hidden"); return; }
+
+      // solo los que llevan al menos un día sin seguimiento
+      var pend = lista.map(function(x){
+        x._dias = diasDesde(x.ultimoContacto);
+        return x;
+      }).filter(function(x){ return x._dias >= 1; });
+
+      if(!pend.length){
+        el("zonaPendientes").classList.remove("hidden");
+        el("hintPend").textContent = lista.length + " en seguimiento";
+        el("cardPendientes").innerHTML =
+          '<div class="vacio">✅ Todos tus potenciales están al día. Tienes ' + lista.length + ' en seguimiento.</div>';
+        return;
+      }
+
+      el("zonaPendientes").classList.remove("hidden");
+      el("hintPend").textContent = pend.length + " sin contactar";
+      el("cardPendientes").innerHTML = pend.map(function(x){
+        var clase = x._dias >= 3 ? "frio" : (x._dias >= 2 ? "tibio" : "hoy");
+        var ico   = x._dias >= 3 ? "🥶" : (x._dias >= 2 ? "⏳" : "🔔");
+        var col   = x._dias >= 3 ? "var(--bad)" : (x._dias >= 2 ? "var(--warn)" : "var(--cyan)");
+        var txtD  = x._dias === 1 ? "ayer" : ("hace " + x._dias + " días");
+        return '<div class="pend ' + clase + '">' +
+          '<div class="ico">' + ico + '</div>' +
+          '<div class="in">' +
+            '<div class="nm">' + esc(x.nombre || "Sin nombre") + '</div>' +
+            '<div class="tel">' + esc(x.phone) + '</div>' +
+            (x.etiqueta ? '<span class="et">' + esc(x.etiqueta) + '</span>' : '') +
+            (x.comentario ? '<div class="co">' + esc(x.comentario) + '</div>' : '') +
+            '<a class="llamar" href="tel:+52' + esc(x.phone) + '">📞 Llamar</a>' +
+          '</div>' +
+          '<div class="dias" style="color:' + col + '">' + txtD + '</div>' +
+        '</div>';
+      }).join("");
+    }).catch(function(){ el("zonaPendientes").classList.add("hidden"); });
   }
 
   function cargarEspejo(){
@@ -804,7 +870,7 @@
         cuotas = c;
         if(!c.mensajesSemana && !c.llamadasSemana) el("avisoSinCuota").classList.remove("hidden");
         zonaGerente();
-        return Promise.all([cargarMiDia(), cargarMiSemana(), cargarRanking(), cargarMiVenta(), cargarVentaEquipo(), cargarEspejo()]);
+        return Promise.all([cargarMiDia(), cargarMiSemana(), cargarRanking(), cargarMiVenta(), cargarVentaEquipo(), cargarEspejo(), cargarPendientes()]);
       });
     });
   }

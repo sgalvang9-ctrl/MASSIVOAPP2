@@ -546,6 +546,76 @@ window.LC = {
     }).catch(function(){ return null; });
   },
 
+  // ---------- Seguimiento de clientes potenciales ----------
+  // Solo se guarda el teléfono de quien el ejecutivo marca como potencial:
+  // es la única forma de poder recordárselo después.
+  guardarSeguimiento: function(perfil, datos){
+    var uid = LCAuth.currentUser ? LCAuth.currentUser.uid : null;
+    if(!uid) return Promise.reject(new Error("Sin sesión"));
+    var id = uid + "_" + String(datos.phone||"").replace(/\D/g,"");
+    var doc = {
+      uid: uid,
+      attuid: (perfil && perfil.attuid) || "",
+      ejecutivo: (perfil && (perfil.nombre || perfil.ejecutivo)) || "",
+      tienda: (perfil && perfil.tienda) || "",
+      phone: datos.phone || "",
+      nombre: datos.nombre || "",
+      etiqueta: datos.etiqueta || "",
+      comentario: datos.comentario || "",
+      estado: datos.estado || "potencial",     // potencial | vendido | descartado
+      origen: datos.origen || "lista",         // lista | base
+      ultimoContacto: fechaLocal(),
+      actualizadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if(datos.creado !== false) doc.creadoEn = firebase.firestore.FieldValue.serverTimestamp();
+    return LCDb.collection("seguimientos").doc(id).set(doc, {merge:true});
+  },
+
+  // Mis seguimientos abiertos (potenciales sin cerrar)
+  misSeguimientos: function(){
+    var uid = LCAuth.currentUser ? LCAuth.currentUser.uid : null;
+    if(!uid) return Promise.resolve([]);
+    return LCDb.collection("seguimientos")
+      .where("uid","==",uid).where("estado","==","potencial").get()
+      .then(function(snap){
+        var out = [];
+        snap.forEach(function(d){ var x = d.data(); x._id = d.id; out.push(x); });
+        // los que llevan más tiempo sin seguimiento, primero
+        out.sort(function(a,b){ return String(a.ultimoContacto||"").localeCompare(String(b.ultimoContacto||"")); });
+        return out;
+      }).catch(function(){ return []; });
+  },
+
+  // ¿Este número ya tiene nota? (para mostrarla antes de volver a contactar)
+  seguimientoDe: function(phone){
+    var uid = LCAuth.currentUser ? LCAuth.currentUser.uid : null;
+    if(!uid) return Promise.resolve(null);
+    var id = uid + "_" + String(phone||"").replace(/\D/g,"");
+    return LCDb.collection("seguimientos").doc(id).get()
+      .then(function(d){ return d.exists ? d.data() : null; })
+      .catch(function(){ return null; });
+  },
+
+  cerrarSeguimiento: function(phone, estado){
+    var uid = LCAuth.currentUser ? LCAuth.currentUser.uid : null;
+    if(!uid) return Promise.reject(new Error("Sin sesión"));
+    var id = uid + "_" + String(phone||"").replace(/\D/g,"");
+    return LCDb.collection("seguimientos").doc(id).set({
+      estado: estado,                                   // vendido | descartado
+      cerradoEn: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+  },
+
+  // Para el gerente: todos los seguimientos de la tienda
+  seguimientosEquipo: function(){
+    return LCDb.collection("seguimientos").where("estado","==","potencial").get()
+      .then(function(snap){
+        var out = [];
+        snap.forEach(function(d){ out.push(d.data()); });
+        return out;
+      }).catch(function(){ return []; });
+  },
+
   // Lista de todo el equipo (para el ranking), desde la lista blanca
   listarEquipo: function(){
     return LCDb.collection("attuidsAutorizados").get().then(function(snap){
