@@ -8,6 +8,12 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+if (typeof XLSX === "undefined") {
+  document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');
+}
+</script>
 <script src="firebase-init.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -194,6 +200,26 @@
   .pill{display:inline-block;padding:3px 8px;border-radius:7px;font-size:11px;font-weight:700;font-family:var(--fn);}
   .p-ok{background:#e6f7ee;color:var(--good);} .p-md{background:#fdf2df;color:var(--warn);} .p-lo{background:#fdecec;color:var(--bad);}
   .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .filebox{border:1.5px dashed #c7d2de;border-radius:var(--radius-sm);padding:26px 14px;text-align:center;
+    cursor:pointer;background:linear-gradient(180deg,#fafcfe,#f5f8fb);}
+  .filebox:hover{border-color:var(--cyan);background:var(--cyan-dim);}
+  .filebox .ic{font-size:28px;} .filebox .main{font-weight:700;font-size:14.5px;margin-top:6px;}
+  .filebox .sub{font-size:12px;color:var(--ink-faint);margin-top:2px;}
+  label{display:block;font-size:11.5px;font-weight:600;color:var(--ink-dim);margin:0 0 5px;
+    text-transform:uppercase;letter-spacing:.04em;}
+  select{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+    font-size:14.5px;font-family:var(--fb);background:#fbfcfe;color:var(--ink);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .btn{display:block;width:100%;padding:13px;border:none;border-radius:var(--radius-sm);font-size:14.5px;
+    font-weight:700;cursor:pointer;font-family:var(--fb);margin-top:14px;
+    background:linear-gradient(135deg,var(--cyan-soft),var(--cyan));color:#042a3d;}
+  .btn:disabled{opacity:.6;cursor:wait;}
+  .ejrow{display:flex;align-items:center;gap:11px;padding:10px 2px;border-bottom:1px solid var(--line);}
+  .ejrow:last-child{border-bottom:none;}
+  .ejrow input{width:auto;accent-color:var(--cyan);transform:scale(1.25);}
+  .ejrow .nm{flex:1;font-size:13.5px;font-weight:600;}
+  .nota{font-size:12px;color:var(--ink-dim);line-height:1.6;background:var(--paper);
+    border-radius:var(--radius-sm);padding:12px 13px;}
   .volver{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--cyan);
     font-family:var(--fb);font-size:13px;font-weight:600;cursor:pointer;padding:6px 0;margin-bottom:6px;}
   .sinsesion{text-align:center;padding:60px 20px;color:var(--ink-faint);}
@@ -206,6 +232,7 @@
   <button class="on" data-v="0">🏪 Tienda</button>
   <button data-v="1">👥 Mi equipo</button>
   <button data-v="2" id="tabDetalle">🔍 Detalle</button>
+  <button data-v="3">📥 Base</button>
 </div>
 
 <div class="semnav" id="semNav">
@@ -251,6 +278,39 @@
       <div id="alertasEquipo"></div>
       <div class="sec"><h2>Clientes potenciales</h2><span class="hint" id="hintPot">—</span></div>
       <div class="card" id="potEquipo"><div class="vacio">Cargando…</div></div>
+    </div>
+
+    <!-- BASE -->
+    <div class="vista" id="v3">
+      <div class="sec"><h2>Repartir base</h2><span class="hint">Excel de contactos</span></div>
+      <div class="card">
+        <div class="filebox" id="baseBox">
+          <div class="ic">📄</div>
+          <div class="main">Toca para elegir el archivo</div>
+          <div class="sub">.xlsx · .xls · .csv</div>
+        </div>
+        <input type="file" id="baseInput" accept=".xlsx,.xls,.csv" style="display:none">
+
+        <div id="baseMap" class="hidden" style="margin-top:14px;">
+          <div class="row2">
+            <div><label>Columna del número</label><select id="baseColTel"></select></div>
+            <div><label>Columna del nombre</label><select id="baseColNom"></select></div>
+          </div>
+          <label style="display:flex;align-items:center;gap:9px;margin-top:12px;">
+            <input type="checkbox" id="baseHeader" checked style="width:auto"> La 1ª fila son títulos
+          </label>
+
+          <div class="sec" style="margin:18px 2px 9px"><h2 style="font-size:13px">¿A quién se reparte?</h2></div>
+          <div id="baseEjecutivos"></div>
+
+          <div id="baseResumen" class="nota hidden" style="margin-top:12px"></div>
+          <button class="btn" id="btnRepartir">Repartir base</button>
+        </div>
+        <div id="baseError" class="alerta a-mal hidden" style="margin-top:12px"></div>
+      </div>
+
+      <div class="sec"><h2>Avance de la base</h2><span class="hint">pendientes por ejecutivo</span></div>
+      <div class="card" id="avanceBase"><div class="vacio">Cargando…</div></div>
     </div>
 
     <!-- DETALLE -->
@@ -567,7 +627,7 @@
     Array.prototype.forEach.call(el("subtabs").querySelectorAll("button"), function(b,j){
       b.classList.toggle("on", i===j);
     });
-    for(var k=0;k<3;k++) el("v"+k).classList.toggle("on", i===k);
+    for(var k=0;k<4;k++){ var v = el("v"+k); if(v) v.classList.toggle("on", i===k); }
     window.scrollTo({top:0,behavior:"smooth"});
   }
   Array.prototype.forEach.call(document.querySelectorAll("#subtabs button"), function(b){
@@ -578,6 +638,154 @@
   el("semNext").addEventListener("click", function(){
     if(!esSemanaActual()) cargarSemana(LC.sumarSemanas(semanaActual, 1));
   });
+
+  // ── REPARTO DE BASE ──
+  var baseFilas = [], baseCabeceras = [], baseContactos = [];
+
+  function normTel(raw){
+    if(raw === null || raw === undefined) return null;
+    var t = String(raw).replace(/[^\d]/g,"");
+    if(!t) return null;
+    if(t.length === 13 && t.indexOf("521") === 0) t = t.slice(3);
+    else if(t.length === 12 && t.indexOf("52") === 0) t = t.slice(2);
+    else if(t.length === 11 && t.charAt(0) === "1") t = t.slice(1);
+    if(t.length !== 10) return null;
+    if(/^(\d)\1{9}$/.test(t)) return null;
+    return t;
+  }
+
+  el("baseBox").addEventListener("click", function(){ el("baseInput").click(); });
+
+  el("baseInput").addEventListener("change", function(ev){
+    var file = ev.target.files[0]; if(!file) return;
+    el("baseError").classList.add("hidden");
+    var r = new FileReader();
+    r.onload = function(e){
+      try{
+        var wb = XLSX.read(new Uint8Array(e.target.result), {type:"array"});
+        var hoja = wb.Sheets[wb.SheetNames[0]];
+        baseFilas = XLSX.utils.sheet_to_json(hoja, {header:1, defval:""});
+        if(!baseFilas.length) throw new Error("vacío");
+        var maxc = Math.max.apply(null, baseFilas.map(function(f){ return f.length; }));
+        baseCabeceras = [];
+        for(var i=0;i<maxc;i++){
+          var h = baseFilas[0][i];
+          baseCabeceras.push((h === "" || h === undefined) ? ("Columna " + (i+1)) : String(h));
+        }
+        var st = el("baseColTel"), sn = el("baseColNom");
+        st.innerHTML = ""; sn.innerHTML = '<option value="-1">— Ninguna —</option>';
+        baseCabeceras.forEach(function(h,i){
+          st.insertAdjacentHTML("beforeend", '<option value="'+i+'">'+esc(h)+'</option>');
+          sn.insertAdjacentHTML("beforeend", '<option value="'+i+'">'+esc(h)+'</option>');
+        });
+        baseCabeceras.forEach(function(h,i){
+          var l = h.toLowerCase();
+          if(/tel|cel|numero|número|phone/.test(l)) st.value = i;
+          if(/nombre|cliente|name/.test(l)) sn.value = i;
+        });
+        pintarEjecutivosReparto();
+        el("baseMap").classList.remove("hidden");
+      }catch(err){
+        el("baseError").textContent = "No pude leer ese archivo. Revisa que sea .xlsx, .xls o .csv.";
+        el("baseError").classList.remove("hidden");
+      }
+    };
+    r.readAsArrayBuffer(file);
+  });
+
+  function pintarEjecutivosReparto(){
+    LC.listarEquipo().then(function(eq){
+      var ejec = eq.filter(function(p){ return (p.rol||"ejecutivo") !== "gerente"; });
+      el("baseEjecutivos").innerHTML = ejec.map(function(p){
+        return '<label class="ejrow"><input type="checkbox" class="ejchk" value="'+esc(p.attuid)+'" checked>' +
+          '<span class="nm">'+esc(p.nombre)+'</span>' +
+          '<span style="font-family:var(--fn);font-size:11px;color:var(--ink-faint)">'+esc(p.attuid)+'</span></label>';
+      }).join("");
+      Array.prototype.forEach.call(document.querySelectorAll(".ejchk"), function(c){
+        c.addEventListener("change", calcularReparto);
+      });
+      calcularReparto();
+    });
+  }
+
+  function seleccionados(){
+    return Array.prototype.filter.call(document.querySelectorAll(".ejchk"), function(c){ return c.checked; })
+      .map(function(c){ return c.value; });
+  }
+
+  function calcularReparto(){
+    var ti = parseInt(el("baseColTel").value,10);
+    var ni = parseInt(el("baseColNom").value,10);
+    var desde = el("baseHeader").checked ? 1 : 0;
+    var vistos = {}; baseContactos = []; var dup = 0, inv = 0;
+    for(var i=desde;i<baseFilas.length;i++){
+      var f = baseFilas[i]; if(!f || !f.length) continue;
+      var t = normTel(f[ti]);
+      if(!t){ inv++; continue; }
+      if(vistos[t]){ dup++; continue; }
+      vistos[t] = true;
+      baseContactos.push({ phone:t, name: ni >= 0 ? String(f[ni]||"").trim() : "" });
+    }
+    var sel = seleccionados();
+    var box = el("baseResumen");
+    box.classList.remove("hidden");
+    if(!sel.length){
+      box.innerHTML = "⚠️ Elige al menos un ejecutivo para repartir.";
+      el("btnRepartir").disabled = true;
+      return;
+    }
+    el("btnRepartir").disabled = false;
+    var base = Math.floor(baseContactos.length / sel.length);
+    var resto = baseContactos.length % sel.length;
+    box.innerHTML = "<b>" + baseContactos.length + " contactos válidos</b>" +
+      (dup ? " · " + dup + " duplicados quitados" : "") +
+      (inv ? " · " + inv + " inválidos" : "") +
+      "<br>Se reparten entre <b>" + sel.length + "</b> ejecutivos: " +
+      base + (resto ? " o " + (base+1) : "") + " cada uno.";
+  }
+
+  ["baseColTel","baseColNom","baseHeader"].forEach(function(id){
+    el(id).addEventListener("change", calcularReparto);
+  });
+
+  el("btnRepartir").addEventListener("click", function(){
+    var sel = seleccionados();
+    if(!baseContactos.length || !sel.length) return;
+    if(!confirm("Se van a repartir " + baseContactos.length + " contactos entre " + sel.length + " ejecutivos. ¿Continuar?")) return;
+    var btn = this; btn.disabled = true; btn.textContent = "Repartiendo…";
+    LC.repartirBase(perfil, baseContactos, sel, el("baseInput").files[0] ? el("baseInput").files[0].name : "")
+      .then(function(res){
+        alert("✅ Listo: " + res.total + " contactos repartidos.");
+        el("baseMap").classList.add("hidden");
+        el("baseInput").value = "";
+        cargarAvanceBase();
+      })
+      .catch(function(err){ alert("No se pudo repartir: " + (err && err.message ? err.message : err)); })
+      .finally(function(){ btn.disabled = false; btn.textContent = "Repartir base"; });
+  });
+
+  function cargarAvanceBase(){
+    return Promise.all([ LC.avanceBase(), LC.listarEquipo() ]).then(function(r){
+      var por = r[0] || {}, eq = r[1] || [];
+      var nombres = {}; eq.forEach(function(p){ nombres[p.attuid] = p.nombre; });
+      var keys = Object.keys(por);
+      if(!keys.length){
+        el("avanceBase").innerHTML = '<div class="vacio">No hay base repartida todavía.</div>';
+        return;
+      }
+      el("avanceBase").innerHTML = keys.map(function(a){
+        var d = por[a];
+        var pct = d.total > 0 ? Math.round(d.atendidos/d.total*100) : 0;
+        return '<div class="wk-row"><div class="wk-ico">👤</div>' +
+          '<div class="wk-info"><div class="wk-name">' + esc(nombres[a] || a) + '</div>' +
+          '<div class="wk-bar"><i style="width:'+pct+'%;background:'+gradPct(pct)+'"></i></div></div>' +
+          '<div class="wk-num" style="color:'+colorPct(pct)+'">' + d.atendidos + ' / ' + d.total +
+          '<small>' + d.pendientes + ' pendientes</small></div></div>';
+      }).join("");
+    }).catch(function(){
+      el("avanceBase").innerHTML = '<div class="vacio">No se pudo cargar.</div>';
+    });
+  }
 
   // ── arranque ──
   if(!window.LC){
@@ -593,6 +801,7 @@
       perfil = p;
       LC.getCuotas().then(function(c){
         cuotas = c;
+        cargarAvanceBase();
         return cargarSemana(LC.lunesDeLaSemana());
       });
     });

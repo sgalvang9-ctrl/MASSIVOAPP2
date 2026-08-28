@@ -267,6 +267,14 @@ if (typeof XLSX === "undefined") {
 
   <div id="restOfApp">
 
+  <section class="card hidden" id="cardBase">
+    <div class="step-eyebrow"><span class="n">📥</span> Base de la tienda</div>
+    <h2 id="baseTitulo">Tienes contactos asignados</h2>
+    <p style="font-size:13px;color:var(--ink-dim);margin:0 0 12px;" id="baseSub">—</p>
+    <button class="btn btn-cyan" id="btnCargarBase">Trabajar mi base</button>
+  </section>
+
+
   <!-- PASO 1: SUBIR LISTA -->
   <section class="card">
     <div class="step-eyebrow"><span class="n">1</span> Tu lista</div>
@@ -335,7 +343,7 @@ if (typeof XLSX === "undefined") {
 </main>
 
 <footer>
-  🔒 <b>Qué sale de este teléfono y qué no.</b> Los números y nombres de tu lista se procesan únicamente aquí y <b>nunca se suben</b>. Lo único que se comparte con tu tienda es el conteo de llamadas y su resultado (con tu ATTUID, sin datos del cliente).<br>
+  🔒 <b>Qué sale de este teléfono y qué no.</b> Los números de <b>las listas que tú subes</b> se procesan solo en este teléfono y no se almacenan. Sí se guardan en el sistema de la tienda: los contactos de <b>la base que reparte tu gerente</b> y los de clientes que marques como <b>potenciales</b>, para poder darles seguimiento. Lo único que se comparte con tu tienda es el conteo de llamadas y su resultado (con tu ATTUID, sin datos del cliente).<br>
   💾 El historial de llamadas se guarda solo en este navegador. Si cambias de equipo o limpias el caché, se pierde.<br><br>
   <span style="opacity:.55">Versión: v27-final</span>
 </footer>
@@ -353,6 +361,8 @@ if (typeof XLSX === "undefined") {
   var filtroActual = "pendientes";
   var ETIQUETAS = ["Volver a llamar","Pidió info","No interesado","Ya tiene equipo","Cita agendada"];
   var notasCache = {};   // phone -> seguimiento guardado
+  var baseAsignada = [];  // contactos que el gerente me repartió
+  var usandoBase = false;
 
   function nsKey(base){
     var slug = (config.tienda || "default").toLowerCase().replace(/[^a-z0-9]+/g,"-");
@@ -623,6 +633,7 @@ if (typeof XLSX === "undefined") {
           l[c.phone] = {resultado: pair[0], ts: Date.now()};
           setLlamadas(l);
           sendToSheet(pair[0]);
+          if(usandoBase && window.LC) LC.marcarAtendido(config.attuid, c.phone);
           if(window.LC){
             LC.registrarLlamada(config, pair[0]).catch(function(err){
               alert("⚠️ No se pudo registrar la llamada: " + (err && err.message ? err.message : err));
@@ -660,6 +671,18 @@ if (typeof XLSX === "undefined") {
 
     updateStats();
   }
+
+  document.getElementById("btnCargarBase").addEventListener("click", function(){
+    if(!baseAsignada.length) return;
+    contacts = baseAsignada.map(function(x){ return { phone: x.phone, name: x.nombre || "" }; });
+    usandoBase = true;
+    cleanStats = { validos: contacts.length, duplicados: 0, invalidos: 0 };
+    document.getElementById("repValidos").textContent = contacts.length;
+    document.getElementById("repDuplicados").textContent = 0;
+    document.getElementById("cleanReport").classList.remove("hidden");
+    document.getElementById("cardBase").classList.add("hidden");
+    renderQueue(); updateStats();
+  });
 
   // ── panel de seguimiento ──
   function abrirPanelSeguimiento(item, c, nota){
@@ -778,6 +801,16 @@ if (typeof XLSX === "undefined") {
         LC.misSeguimientos().then(function(lista){
           lista.forEach(function(x){ notasCache[x.phone] = x; });
           renderQueue();
+        }).catch(function(){});
+
+        // ¿el gerente me repartió base?
+        LC.miBaseAsignada(config.attuid).then(function(lista){
+          baseAsignada = lista || [];
+          if(baseAsignada.length){
+            document.getElementById("cardBase").classList.remove("hidden");
+            document.getElementById("baseSub").textContent =
+              baseAsignada.length + " contactos pendientes por atender, asignados por tu gerente.";
+          }
         }).catch(function(){});
         T("5·app mostrada OK");
       }catch(e){

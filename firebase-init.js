@@ -546,6 +546,72 @@ window.LC = {
     }).catch(function(){ return null; });
   },
 
+  // ---------- Base repartida por el gerente ----------
+  // El gerente sube el Excel; el sistema reparte parejo entre los ejecutivos
+  // que él elija. Lo no atendido se acumula con lo nuevo.
+  repartirBase: function(perfil, contactos, attuids, nombreBase){
+    if(!attuids || !attuids.length) return Promise.reject(new Error("Elige al menos un ejecutivo."));
+    var lote = "base_" + Date.now();
+    var batchSize = 400;
+    var docs = contactos.map(function(c, i){
+      return {
+        phone: c.phone,
+        nombre: c.name || "",
+        asignadoA: attuids[i % attuids.length],   // reparto parejo, en orden
+        estado: "pendiente",                      // pendiente | atendido
+        lote: lote,
+        nombreBase: nombreBase || "",
+        tienda: (perfil && perfil.tienda) || "",
+        creadoPor: LCAuth.currentUser ? LCAuth.currentUser.uid : null,
+        creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+      };
+    });
+
+    // Firestore limita cada lote; se manda por tandas
+    function mandarTanda(desde){
+      if(desde >= docs.length) return Promise.resolve({total: docs.length, lote: lote});
+      var batch = LCDb.batch();
+      docs.slice(desde, desde + batchSize).forEach(function(d){
+        var ref = LCDb.collection("baseAsignada").doc(d.asignadoA + "_" + d.phone);
+        batch.set(ref, d, {merge:true});
+      });
+      return batch.commit().then(function(){ return mandarTanda(desde + batchSize); });
+    }
+    return mandarTanda(0);
+  },
+
+  // Lo que me toca atender hoy
+  miBaseAsignada: function(attuid){
+    return LCDb.collection("baseAsignada")
+      .where("asignadoA","==",attuid).where("estado","==","pendiente").get()
+      .then(function(snap){
+        var out = [];
+        snap.forEach(function(d){ var x = d.data(); x._id = d.id; out.push(x); });
+        return out;
+      }).catch(function(){ return []; });
+  },
+
+  marcarAtendido: function(attuid, phone){
+    return LCDb.collection("baseAsignada").doc(attuid + "_" + phone).set({
+      estado: "atendido",
+      atendidoEn: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true}).catch(function(){});
+  },
+
+  // Avance de la base, para el gerente
+  avanceBase: function(){
+    return LCDb.collection("baseAsignada").get().then(function(snap){
+      var por = {};
+      snap.forEach(function(d){
+        var x = d.data(), a = x.asignadoA || "(sin asignar)";
+        if(!por[a]) por[a] = { pendientes:0, atendidos:0, total:0 };
+        por[a].total++;
+        if(x.estado === "atendido") por[a].atendidos++; else por[a].pendientes++;
+      });
+      return por;
+    }).catch(function(){ return {}; });
+  },
+
   // ---------- Seguimiento de clientes potenciales ----------
   // Solo se guarda el teléfono de quien el ejecutivo marca como potencial:
   // es la única forma de poder recordárselo después.
