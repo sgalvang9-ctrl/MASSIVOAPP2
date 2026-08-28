@@ -145,6 +145,15 @@
     font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);}
   .ind-head .sp{flex:1;}
   .ind-head span.w{flex:none;width:62px;text-align:center;}
+  .semnav{display:flex;align-items:center;gap:10px;justify-content:center;padding:9px;margin-bottom:11px;
+    background:#fff;border-radius:var(--radius-sm);box-shadow:var(--shadow);}
+  .semnav button{width:32px;height:32px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
+    color:var(--navy);font-size:18px;line-height:1;cursor:pointer;font-family:var(--fb);}
+  .semnav button:disabled{opacity:.32;cursor:default;}
+  .semlbl{text-align:center;min-width:160px;}
+  .semlbl span{display:block;font-family:var(--fd);font-size:13px;font-weight:700;}
+  .semlbl small{display:block;font-size:9.5px;color:var(--ink-faint);text-transform:uppercase;
+    letter-spacing:.06em;font-weight:600;margin-top:1px;}
   .hidden{display:none!important;}
   .vacio{text-align:center;padding:24px 10px;color:var(--ink-faint);font-size:13px;}
   @media(max-width:400px){ .ring{width:104px;height:104px;} .herotxt h1{font-size:18.5px;} .gap .big{font-size:27px;} }
@@ -199,6 +208,11 @@
   </div>
 
   <div class="sec"><h2>Tu semana</h2><span class="hint" id="hintSemana">—</span></div>
+  <div class="semnav">
+    <button id="semPrev" aria-label="Semana anterior">‹</button>
+    <div class="semlbl"><span id="semTexto">—</span><small id="semTag"></small></div>
+    <button id="semNext" aria-label="Semana siguiente">›</button>
+  </div>
   <div class="card">
     <div class="week" id="graficaSemana"></div>
     <div class="legend">
@@ -269,7 +283,11 @@
       </div>
       <div class="row2">
         <div><label>Seguros</label><input type="number" min="0" id="kSeguros" placeholder="0"></div>
-        <div><label>ARPU objetivo ($)</label><input type="number" min="0" id="kArpu" placeholder="0"></div>
+        <div><label>ARPU con equipo ($)</label><input type="number" min="0" id="kArpuConEquipo" placeholder="0"></div>
+      </div>
+      <div class="row2">
+        <div><label>ARPU solo servicio ($)</label><input type="number" min="0" id="kArpuSoloServicio" placeholder="0"></div>
+        <div></div>
       </div>
       <button class="btn" id="btnGuardarKpis">Guardar metas de venta</button>
       <div class="nota">Estos números salen del Checklist de cada ejecutivo — nadie los captura dos veces.</div>
@@ -285,7 +303,7 @@
 <script>
 (function(){
   "use strict";
-  var perfil = null, cuotas = null;
+  var perfil = null, cuotas = null, semanaVista = null;
   var DIAS = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 
   function el(id){ return document.getElementById(id); }
@@ -373,12 +391,20 @@
     }).catch(function(){ el("heroSub").textContent = "No se pudo cargar tu actividad."; });
   }
 
+  function esSemanaActual(){ return semanaVista === LC.lunesDeLaSemana(); }
+  function pintarNavSemana(){
+    el("semTexto").textContent = LC.etiquetaSemana(semanaVista);
+    el("semTag").textContent = esSemanaActual() ? "semana en curso" : "semana cerrada";
+    el("semNext").disabled = esSemanaActual();
+  }
+
   function cargarMiSemana(){
-    var semana = LC.lunesDeLaSemana();
+    var semana = semanaVista;
+    pintarNavSemana();
     return LC.actividadSemanaPorDia(perfil.attuid, semana).then(function(d){
       var maxV = 1;
       for(var i=0;i<7;i++) maxV = Math.max(maxV, d.mensajes[i] + d.llamadas[i]);
-      var hoy = idxHoy();
+      var hoy = esSemanaActual() ? idxHoy() : -1;
       el("graficaSemana").innerHTML = DIAS.map(function(nm, i){
         var m = d.mensajes[i], l = d.llamadas[i];
         var hM = Math.round(m / maxV * 88), hL = Math.round(l / maxV * 88);
@@ -412,7 +438,7 @@
   }
 
   function cargarRanking(){
-    var semana = LC.lunesDeLaSemana();
+    var semana = semanaVista;
     return Promise.all([ LC.contarActividadSemana(semana), LC.listarEquipo() ]).then(function(res){
       var act = res[0] || {}, equipo = res[1] || [];
       var msj = act.mensajesPorAttuid || {}, llm = act.llamadasPorAttuid || {};
@@ -461,12 +487,13 @@
     ["pospagoPropio", "Pospago propio", "🔄"],
     ["renovacion",    "Renovación",     "♻️"],
     ["accesorios",    "Accesorios",     "🎧"],
-    ["seguros",       "Seguros",        "🛡️"],
-    ["arpu",          "ARPU promedio",  "💵"]
+    ["seguros",          "Seguros",            "🛡️"],
+    ["arpuConEquipo",    "ARPU con equipo",    "💵"],
+    ["arpuSoloServicio", "ARPU solo servicio", "📶"]
   ];
 
   function cargarMiVenta(){
-    var semana = LC.lunesDeLaSemana();
+    var semana = semanaVista;
     return LC.kpisSemana(perfil.attuid, semana).then(function(k){
       if(!k){ el("ventaVacio").textContent = "Sin datos de venta esta semana."; return; }
       var metas = cuotas.kpis || {};
@@ -484,7 +511,7 @@
         var grad = pct === null ? "var(--ink-faint)"
           : (pct >= 100 ? "linear-gradient(90deg,#12a058,#5fd39a)"
           : (pct >= 60 ? "linear-gradient(90deg,#c07f08,#e8c07a)" : "linear-gradient(90deg,#cf3838,#e08a8a)"));
-        var esDinero = (key === "arpu");
+        var esDinero = (key.indexOf("arpu") === 0);
         var muestra = esDinero ? ("$" + val) : val;
         var muestraMeta = meta > 0 ? (esDinero ? (" / $" + meta) : (" / " + meta)) : "";
         return '<div class="wk-row">' +
@@ -601,7 +628,8 @@
     el("kRenovacion").value    = mk.renovacion    || "";
     el("kAccesorios").value    = mk.accesorios    || "";
     el("kSeguros").value       = mk.seguros       || "";
-    el("kArpu").value          = mk.arpu          || "";
+    el("kArpuConEquipo").value    = mk.arpuConEquipo    || "";
+    el("kArpuSoloServicio").value = mk.arpuSoloServicio || "";
 
     el("btnGuardarKpis").addEventListener("click", function(){
       var btn = this;
@@ -612,7 +640,8 @@
         renovacion:    Number(el("kRenovacion").value)    || 0,
         accesorios:    Number(el("kAccesorios").value)    || 0,
         seguros:       Number(el("kSeguros").value)       || 0,
-        arpu:          Number(el("kArpu").value)          || 0
+        arpuConEquipo:    Number(el("kArpuConEquipo").value)    || 0,
+        arpuSoloServicio: Number(el("kArpuSoloServicio").value) || 0
       };
       LC.setCuotas({
         mensajesSemana: cuotas.mensajesSemana,
@@ -648,6 +677,13 @@
     });
   }
 
+  function irSemana(delta){
+    semanaVista = LC.sumarSemanas(semanaVista, delta);
+    Promise.all([cargarMiSemana(), cargarRanking(), cargarMiVenta()]);
+  }
+  el("semPrev").addEventListener("click", function(){ irSemana(-1); });
+  el("semNext").addEventListener("click", function(){ if(!esSemanaActual()) irSemana(1); });
+
   // arranque
   var f = new Date();
   el("chipFecha").textContent = DIAS[idxHoy()] + " " + f.getDate() + " " +
@@ -665,6 +701,7 @@
         return;
       }
       perfil = p;
+      semanaVista = LC.lunesDeLaSemana();
       el("ctxLinea").textContent = (p.nombre || p.attuid) + " · " + (p.tienda || "León Centro");
       LC.getCuotas().then(function(c){
         cuotas = c;

@@ -198,6 +198,9 @@
   <button class="tab" id="tabChecklist" onclick="switchTab('checklist')">
     <span class="ic">📋</span> Checklist
   </button>
+  <button class="tab hidden" id="tabGerencia" onclick="switchTab('gerencia')">
+    <span class="ic">🏪</span> Gerencia
+  </button>
 </div>
 
 <div class="frames">
@@ -205,10 +208,12 @@
   <div class="loading hidden" id="loadingPromos"><div class="spinner"></div>Cargando Promos…</div>
   <div class="loading hidden" id="loadingLlamadas"><div class="spinner"></div>Cargando Llamadas…</div>
   <div class="loading hidden" id="loadingChecklist"><div class="spinner"></div>Cargando Checklist…</div>
+  <div class="loading hidden" id="loadingGerencia"><div class="spinner"></div>Cargando Gerencia…</div>
   <iframe id="frameTablero" class="active" src="tablero.html" title="Tablero"></iframe>
   <iframe id="framePromos" title="Promos por WhatsApp"></iframe>
   <iframe id="frameLlamadas" title="Llamadas"></iframe>
   <iframe id="frameChecklist" title="Check List de Salida"></iframe>
+  <iframe id="frameGerencia" title="Gerencia"></iframe>
 </div>
 
 </div><!-- /appShell -->
@@ -260,6 +265,8 @@
       authScreen.classList.add('hidden');
       appShell.classList.remove('hidden');
       document.getElementById('whoLabel').textContent = '🏬 ' + perfil.tienda + ' · ' + perfil.nombre + (perfil.rol==='gerente' ? ' (Gerente)' : '');
+      if(perfil.rol === 'gerente'){ document.getElementById('tabGerencia').classList.remove('hidden'); }
+      else { document.getElementById('tabGerencia').classList.add('hidden'); }
     }else{
       appShell.classList.add('hidden');
       authScreen.classList.remove('hidden');
@@ -268,9 +275,9 @@
 </script>
 
 <script>
-  var TABS = ['tablero', 'promos', 'llamadas', 'checklist'];
-  var SRC = { promos: 'promos.html', llamadas: 'llamadas.html', checklist: 'checklist_salida.html' };
-  var loaded = { tablero: true, promos: false, llamadas: false, checklist: false };
+  var TABS = ['tablero', 'promos', 'llamadas', 'checklist', 'gerencia'];
+  var SRC = { promos: 'promos.html', llamadas: 'llamadas.html', checklist: 'checklist_salida.html', gerencia: 'gerencia.html' };
+  var loaded = { tablero: true, promos: false, llamadas: false, checklist: false, gerencia: false };
 
   document.getElementById('frameTablero').addEventListener('load', function(){
     document.getElementById('loadingTablero').classList.add('hidden');
@@ -295,7 +302,7 @@
   }
 
   // ---------- detección de versión nueva ----------
-  var APP_VERSION = "v33";
+  var APP_VERSION = "v35";
   document.getElementById("verChip").textContent = APP_VERSION;
 
   function mostrarAvisoUpdate(reg){

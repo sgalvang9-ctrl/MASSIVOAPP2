@@ -62,8 +62,22 @@ function lunesDeLaSemana(d){
   return fechaLocal(l);
 }
 
+function sumarSemanas(semanaISO, n){
+  var d = new Date(semanaISO + "T00:00:00");
+  d.setDate(d.getDate() + n*7);
+  return fechaLocal(d);
+}
+function etiquetaSemana(semanaISO){
+  var i = new Date(semanaISO + "T00:00:00");
+  var f = new Date(i); f.setDate(i.getDate()+6);
+  var m = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  return i.getDate() + " " + m[i.getMonth()] + " – " + f.getDate() + " " + m[f.getMonth()];
+}
+
 window.LC = {
   lunesDeLaSemana: lunesDeLaSemana,
+  sumarSemanas: sumarSemanas,
+  etiquetaSemana: etiquetaSemana,
   auth: LCAuth,
   db: LCDb,
 
@@ -274,11 +288,11 @@ window.LC = {
         llamadasSemana: d.llamadasSemana || 0,
         diasPiso: d.diasPiso || 6,
         porAttuid: d.porAttuid || {},   // cuotas individuales que pisan la general
-        kpis: d.kpis || { pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpu:0 }
+        kpis: d.kpis || { pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpuConEquipo:0, arpuSoloServicio:0 }
       };
     }).catch(function(){
       return { mensajesSemana:0, llamadasSemana:0, diasPiso:6, porAttuid:{},
-               kpis:{ pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpu:0 } };
+               kpis:{ pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpuConEquipo:0, arpuSoloServicio:0 } };
     });
   },
 
@@ -332,11 +346,12 @@ window.LC = {
   },
 
   _kpisVacio: function(){
-    return { pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpu:0 };
+    return { pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0,
+             arpuConEquipo:0, arpuSoloServicio:0 };
   },
 
   _sumarDocs: function(docs){
-    var t = window.LC._kpisVacio(), arpuVals = [];
+    var t = window.LC._kpisVacio(), conEq = [], soloSrv = [];
     docs.forEach(function(d){
       var a = d.activos || {};
       t.pospagoNuevo  += Number(a.pospagoNuevo)  || 0;
@@ -345,12 +360,14 @@ window.LC = {
       t.accesorios    += Number(a.accesorios)    || 0;
       t.seguros       += Number(a.seguros)       || 0;
       var r = d.arpu || {};
-      [r.equipoNuevo, r.equipoPropio, r.renovaciones].forEach(function(v){
-        var n = Number(v) || 0;
-        if(n > 0) arpuVals.push(n);
-      });
+      // ARPU con equipo = lo capturado en "equipo nuevo"
+      var n1 = Number(r.equipoNuevo) || 0;  if(n1 > 0) conEq.push(n1);
+      // ARPU solo servicio = lo capturado en "equipo propio"
+      var n2 = Number(r.equipoPropio) || 0; if(n2 > 0) soloSrv.push(n2);
     });
-    t.arpu = arpuVals.length ? Math.round(arpuVals.reduce(function(x,y){return x+y;},0) / arpuVals.length) : 0;
+    function prom(a){ return a.length ? Math.round(a.reduce(function(x,y){return x+y;},0)/a.length) : 0; }
+    t.arpuConEquipo    = prom(conEq);
+    t.arpuSoloServicio = prom(soloSrv);
     return t;
   },
 
@@ -358,6 +375,92 @@ window.LC = {
     var docs = [];
     snap.forEach(function(doc){ docs.push(doc.data()); });
     return window.LC._sumarDocs(docs);
+  },
+
+  // Actividad por día de todo el equipo (para contar días en 0)
+  actividadEquipoPorDia: function(semanaInicio){
+    var inicio = new Date(semanaInicio + "T00:00:00");
+    var fin = new Date(inicio); fin.setDate(fin.getDate() + 6);
+    var fFin = fechaLocal(fin);
+    var qm = LCDb.collection("envios").where("fecha",">=",semanaInicio).where("fecha","<=",fFin).get();
+    var ql = LCDb.collection("llamadas").where("fecha",">=",semanaInicio).where("fecha","<=",fFin).get();
+    return Promise.all([qm, ql]).then(function(r){
+      var porAttuid = {};   // attuid -> { fecha: true }
+      function marcar(doc){
+        var d = doc.data(), a = d.attuid;
+        if(!a) return;
+        if(!porAttuid[a]) porAttuid[a] = {};
+        porAttuid[a][d.fecha] = true;
+      }
+      r[0].forEach(marcar); r[1].forEach(marcar);
+      return porAttuid;
+    }).catch(function(){ return {}; });
+  },
+
+  // Resumen completo del equipo: prospección + venta + tasa de cierre.
+  // Solo tiene sentido para el gerente (las reglas limitan la lectura ajena).
+  resumenEquipo: function(semana){
+    return Promise.all([
+      window.LC.contarActividadSemana(semana),
+      window.LC.kpisEquipoSemana(semana),
+      window.LC.listarEquipo(),
+      window.LC.actividadEquipoPorDia(semana)
+    ]).then(function(r){
+      var act = r[0] || {}, kpis = r[1] || {}, equipo = r[2] || [], porDia = r[3] || {};
+      var msj = act.mensajesPorAttuid || {}, llm = act.llamadasPorAttuid || {};
+      var vistos = {};
+      equipo.forEach(function(p){ vistos[p.attuid] = true; });
+      var attuidGerente = null;
+      equipo.forEach(function(p){ if((p.rol||"") === "gerente") attuidGerente = p.attuid; });
+      Object.keys(msj).concat(Object.keys(llm)).concat(Object.keys(kpis)).forEach(function(a){
+        if(a && a !== "(sin ATTUID)" && a !== attuidGerente && !vistos[a]){
+          vistos[a] = true; equipo.push({attuid:a, nombre:a});
+        }
+      });
+      // El gerente no cuenta para cuotas ni promedios del equipo
+      equipo = equipo.filter(function(p){ return (p.rol || "ejecutivo") !== "gerente"; });
+
+      var filas = equipo.map(function(p){
+        var k = kpis[p.attuid] || window.LC._kpisVacio();
+        var m = msj[p.attuid] || 0, l = llm[p.attuid] || 0;
+        var contactos = m + l;
+        var activaciones = k.pospagoNuevo + k.pospagoPropio + k.renovacion;
+        return {
+          attuid: p.attuid, nombre: p.nombre, rol: p.rol || "ejecutivo",
+          mensajes: m, llamadas: l, contactos: contactos,
+          activaciones: activaciones, kpis: k,
+          cierre: contactos > 0 ? Math.round(activaciones / contactos * 1000) / 10 : null,
+          diasEnCero: (function(){
+            var inicio = new Date(semana + "T00:00:00");
+            var hoy = new Date(); hoy.setHours(0,0,0,0);
+            var conAct = porDia[p.attuid] || {};
+            var cero = 0;
+            for(var i=0;i<7;i++){
+              var d = new Date(inicio); d.setDate(inicio.getDate()+i);
+              if(d > hoy) break;                       // días futuros no cuentan
+              if(!conAct[fechaLocal(d)]) cero++;
+            }
+            return cero;
+          })()
+        };
+      });
+      // totales de tienda
+      var tot = { mensajes:0, llamadas:0, activaciones:0,
+                  pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0 };
+      filas.forEach(function(f){
+        tot.mensajes += f.mensajes; tot.llamadas += f.llamadas; tot.activaciones += f.activaciones;
+        tot.pospagoNuevo  += f.kpis.pospagoNuevo;
+        tot.pospagoPropio += f.kpis.pospagoPropio;
+        tot.renovacion    += f.kpis.renovacion;
+        tot.accesorios    += f.kpis.accesorios;
+        tot.seguros       += f.kpis.seguros;
+      });
+      var conCierre = filas.filter(function(f){ return f.cierre !== null; });
+      var promCierre = conCierre.length
+        ? Math.round(conCierre.reduce(function(a,f){return a+f.cierre;},0) / conCierre.length * 10) / 10
+        : null;
+      return { filas: filas, totales: tot, promedioCierre: promCierre };
+    });
   },
 
   // Lista de todo el equipo (para el ranking), desde la lista blanca
