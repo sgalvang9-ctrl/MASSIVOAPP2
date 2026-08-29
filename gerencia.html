@@ -33,6 +33,7 @@ if (typeof XLSX === "undefined") {
     --fd:'Sora','Inter',sans-serif; --fb:'Inter',-apple-system,sans-serif; --fn:'Roboto Mono',monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{overflow-x:hidden;max-width:100vw;}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
   body{font-family:var(--fb);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;padding-bottom:44px;}
 
@@ -84,7 +85,9 @@ if (typeof XLSX === "undefined") {
   .gap.ok .bar i{background:linear-gradient(90deg,var(--good),#5fd39a);}
 
   /* ── SECCIONES ── */
-  .sec{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:26px 2px 11px;}
+  .sec{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;margin:26px 2px 11px;}
+  .sec h2{min-width:0;}
+  .sec .hint{flex-shrink:0;}
   .sec h2{font-family:var(--fd);font-size:14.5px;font-weight:700;letter-spacing:-.01em;}
   .sec .hint{font-size:11.5px;color:var(--ink-faint);font-weight:500;}
   .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px;}
@@ -479,7 +482,7 @@ if (typeof XLSX === "undefined") {
     var filas = datos.filas.slice().sort(function(a,b){ return b.activaciones - a.activaciones; });
 
     el("tablaEquipo").innerHTML =
-      '<table><thead><tr><th>Ejecutivo</th><th>Msj</th><th>Llam</th><th>Activ</th><th>Cierre</th><th>0s</th></tr></thead><tbody>' +
+      '<table><thead><tr><th>Ejecutivo</th><th>Msj</th><th>Llam</th><th>Activ</th><th>Cierre</th><th>Días 0</th></tr></thead><tbody>' +
       filas.map(function(f){
         var pctA = metaActivInd > 0 ? Math.round(f.activaciones/metaActivInd*100) : null;
         var cierreTxt = f.cierre === null ? "—" : (f.cierre + "%");

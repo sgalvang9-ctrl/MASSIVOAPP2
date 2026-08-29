@@ -27,6 +27,7 @@
     --fd:'Sora','Inter',sans-serif; --fb:'Inter',-apple-system,sans-serif; --fn:'Roboto Mono',monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{overflow-x:hidden;max-width:100vw;}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
   body{font-family:var(--fb);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;padding-bottom:44px;}
 
@@ -54,12 +55,15 @@
   .herotxt{min-width:0;}
   .herotxt h1{font-family:var(--fd);font-size:21px;font-weight:800;letter-spacing:-.025em;line-height:1.15;margin-bottom:7px;}
   .herotxt p{font-size:13px;opacity:.72;line-height:1.5;}
-  .cuotachip{display:inline-flex;align-items:center;gap:7px;margin-top:11px;font-size:11.5px;font-weight:600;
-    background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.15);padding:6px 11px;border-radius:999px;
-    font-family:var(--fn);letter-spacing:.01em;}
+  .cuotachip{display:flex;flex-direction:column;gap:3px;margin-top:12px;
+    background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.15);
+    padding:9px 13px;border-radius:12px;max-width:100%;}
+  .cuotachip .etiq{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;
+    opacity:.65;display:flex;align-items:center;gap:6px;}
+  .cuotachip .valor{font-size:12.5px;font-weight:600;font-family:var(--fn);}
   .cuotachip b{font-weight:700;color:var(--cyan-soft);}
-  .cuotachip .tag{font-family:var(--fb);font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;
-    background:rgba(0,182,241,.25);padding:2px 6px;border-radius:5px;}
+  .cuotachip .tag{font-family:var(--fb);font-size:9px;text-transform:uppercase;letter-spacing:.06em;
+    background:rgba(0,182,241,.25);padding:2px 6px;border-radius:5px;font-weight:700;}
 
   /* ── TARJETAS FLOTANTES ── */
   main{max-width:760px;margin:0 auto;padding:0 14px;}
@@ -78,7 +82,9 @@
   .gap.ok .bar i{background:linear-gradient(90deg,var(--good),#5fd39a);}
 
   /* ── SECCIONES ── */
-  .sec{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:26px 2px 11px;}
+  .sec{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;margin:26px 2px 11px;}
+  .sec h2{min-width:0;}
+  .sec .hint{flex-shrink:0;}
   .sec h2{font-family:var(--fd);font-size:14.5px;font-weight:700;letter-spacing:-.01em;}
   .sec .hint{font-size:11.5px;color:var(--ink-faint);font-weight:500;}
   .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:17px;}
@@ -407,8 +413,9 @@
       el("cuotaLblLlamadas").textContent = mL > 0 ? "meta " + mL : "";
       if(mM > 0 || mL > 0){
         el("cuotaHoy").classList.remove("hidden");
-        el("cuotaHoy").innerHTML = "Tu cuota de hoy: <b>" + mM + "</b> mensajes · <b>" + mL + "</b> llamadas" +
-          (mia.individual ? ' <span class="tag">personal</span>' : '');
+        el("cuotaHoy").innerHTML = '<div class="etiq">🎯 Tu cuota de hoy' +
+          (mia.individual ? ' <span class="tag">personal</span>' : '') + '</div>' +
+          '<div class="valor"><b>' + mM + '</b> mensajes · <b>' + mL + '</b> llamadas</div>';
       }else{
         el("cuotaHoy").classList.add("hidden");
       }
