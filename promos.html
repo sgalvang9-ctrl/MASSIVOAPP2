@@ -2,7 +2,7 @@
 <html lang="es-MX">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -317,6 +317,14 @@ if (typeof XLSX === "undefined") {
 
   <div id="restOfApp">
 
+  <!-- BASE REPARTIDA POR EL GERENTE -->
+  <section class="card hidden" id="cardBase">
+    <div class="step-eyebrow"><span class="n">📥</span> Base de la tienda</div>
+    <h2 id="baseTitulo">Tienes contactos asignados</h2>
+    <p style="font-size:13px;color:var(--ink-dim);margin:0 0 12px;" id="baseSub">—</p>
+    <button class="btn btn-cyan" id="btnCargarBase">Trabajar mi base</button>
+  </section>
+
   <!-- PASO 1: SUBIR LISTA -->
   <section class="card">
     <div class="step-eyebrow"><span class="n">1</span> Tu lista</div>
@@ -479,7 +487,7 @@ if (typeof XLSX === "undefined") {
   🔒 <b>Qué sale de este teléfono y qué no.</b> Los números de <b>las listas que tú subes</b> se procesan solo en este teléfono y no se almacenan. Sí se guardan en el sistema de la tienda: los contactos de <b>la base que reparte tu gerente</b> y los de clientes que marques como <b>potenciales</b>, para poder darles seguimiento. Lo único que se comparte con tu tienda es: el conteo de mensajes que envías (con tu ATTUID, sin datos del cliente) y las marcas de baja o "no existe", guardadas como una huella cifrada que <b>no permite reconstruir el número</b> — sirve solo para que ningún compañero le vuelva a escribir a quien pidió no ser contactado.<br>
   <b>Aviso de privacidad simplificado:</b> los números y nombres que subes se usan únicamente para el envío manual de promociones AT&T por WhatsApp por parte del ejecutivo identificado arriba. No se comparten con terceros. El titular puede solicitar no ser contactado de nuevo respondiendo "BAJA" o pidiéndolo directamente al ejecutivo; esa solicitud debe marcarse en el Paso 3.<br><br>
   💾 El historial de envíos y la lista de bajas se guardan solo en este navegador. Si cambias de equipo o limpias el caché, se pierden — considera exportar tu lista de bajas periódicamente.<br><br>
-  <span style="opacity:.55">Versión: v27-final</span>
+  <span style="opacity:.55">Versión: v42</span>
 </footer>
 
 <script>
@@ -495,6 +503,8 @@ if (typeof XLSX === "undefined") {
   var estadosRemotos = {};   // bajas/no-existe del equipo, indexadas por huella
   var ETIQUETAS = ["Volver a llamar","Pidió info","No interesado","Ya tiene equipo","Cita agendada"];
   var notasCache = {};
+  var baseAsignada = [];   // contactos que el gerente me repartió
+  var usandoBase = false;  // true cuando la cola viene de la base de la tienda
   var cleanStats = {validos:0, duplicados:0, invalidos:0, enBaja:0, enEnfriamiento:0, procesadoEn:null};
   var filtroActual = "pendientes";
   var nextSendTs = 0;
@@ -852,6 +862,23 @@ if (typeof XLSX === "undefined") {
     return phone ? phone.slice(-2) : "?";
   }
 
+  // Carga en la cola los contactos que el gerente repartió a este ejecutivo.
+  // No pasa por la limpieza del Excel: la base ya viene validada del reparto.
+  function cargarBaseEnCola_(){
+    if(!baseAsignada.length) return;
+    contacts = baseAsignada.map(function(x){ return { phone: x.phone, name: x.nombre || "", raw: x.phone }; });
+    usandoBase = true;
+    cleanStats = {validos: contacts.length, duplicados:0, invalidos:0, enBaja:0,
+                  enEnfriamiento:0, enNoExiste:0, procesadoEn: Date.now()};
+    document.getElementById("repValidos").textContent = contacts.length;
+    ["repDuplicados","repInvalidos","repSuprimidos","repEnfriamiento","repNoExiste"].forEach(function(id){
+      var e = document.getElementById(id); if(e) e.textContent = 0;
+    });
+    document.getElementById("cleanReport").classList.remove("hidden");
+    document.getElementById("cardBase").classList.add("hidden");
+    renderQueue();
+  }
+
   function renderQueue(){
     var listEl = document.getElementById("queueList");
     var emptyEl = document.getElementById("queueEmpty");
@@ -1130,6 +1157,10 @@ if (typeof XLSX === "undefined") {
     if(window.LC){
       LC.registrarEnvio(config).catch(function(err){ alert("⚠️ Error guardando en Firestore (envío): " + (err && err.message ? err.message : err)); });
       LC.promosSetEstado(config.tienda, c.phone, "sent").catch(function(){});
+      // si la cola viene de la base del gerente, el mensaje ya cuenta como atendido
+      if(usandoBase) LC.marcarAtendido(config.attuid, c.phone).catch(function(e){
+        console.warn("promos·marcarAtendido falló:", e && e.code, e && e.message);
+      });
     }
 
     var intervaloSeg = 15; // fijo — no editable por el ejecutivo
@@ -1344,6 +1375,27 @@ if (typeof XLSX === "undefined") {
         saveJSON(STORAGE_PREFIX + "config", config);
         T("4· config lista, mostrando app");
         mostrarApp_();
+
+        // seguimientos propios (clientes marcados como potenciales)
+        LC.misSeguimientos().then(function(lista){
+          (lista || []).forEach(function(x){ notasCache[x.phone] = x; });
+          renderQueue();
+        }).catch(function(e){
+          console.warn("promos·misSeguimientos falló:", e && e.code, e && e.message);
+        });
+
+        // ¿el gerente me repartió base?
+        LC.miBaseAsignada(config.attuid).then(function(lista){
+          baseAsignada = lista || [];
+          if(baseAsignada.length){
+            document.getElementById("cardBase").classList.remove("hidden");
+            document.getElementById("baseSub").textContent =
+              baseAsignada.length + " contactos pendientes por atender, asignados por tu gerente.";
+          }
+        }).catch(function(e){
+          console.warn("promos·miBaseAsignada falló:", e && e.code, e && e.message);
+        });
+
         T("5· app mostrada OK");
       }catch(e){
         T("ERROR: " + (e && e.message ? e.message : e));
@@ -1352,6 +1404,9 @@ if (typeof XLSX === "undefined") {
   }else{
     exigirLogin_();
   }
+  var btnBase_ = document.getElementById("btnCargarBase");
+  if(btnBase_) btnBase_.addEventListener("click", cargarBaseEnCola_);
+
   setInterval(checkLock, 15000);
 })();
 </script>
