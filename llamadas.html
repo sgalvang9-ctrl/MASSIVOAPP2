@@ -234,6 +234,18 @@ if (typeof XLSX === "undefined") {
   button:focus-visible, .filebox:focus-visible, .storepill:focus-visible{
     outline:2px solid var(--cyan); outline-offset:2px;
   }
+  /* ---------- detección automática de columnas ---------- */
+  .detbox{border-radius:var(--radius-sm);padding:14px;margin-top:12px;font-size:13px;line-height:1.5;}
+  .detbox.bien{background:var(--good-bg);border:1px solid #bfe6cf;color:#145c37;}
+  .detbox.mal{background:var(--warn-bg);border:1px solid #f2ddb3;color:#6b4708;}
+  .detbox .dtit{font-family:var(--font-display);font-weight:800;font-size:14px;margin-bottom:9px;}
+  .detbox .drow{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid rgba(20,92,55,.14);}
+  .detbox .drow span{opacity:.8;}
+  .detbox .drow b{text-align:right;word-break:break-word;}
+  .dlink{display:block;width:100%;margin-top:11px;padding:9px;background:#fff;color:var(--ink-dim);
+    border:1.5px solid var(--line);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
+    font-family:var(--font-body);min-height:38px;}
+  .dlink:hover{border-color:var(--cyan);color:var(--navy);}
 </style>
 </head>
 <body>
@@ -277,7 +289,7 @@ if (typeof XLSX === "undefined") {
 
   <!-- PASO 1: SUBIR LISTA -->
   <section class="card">
-    <div class="step-eyebrow"><span class="n">1</span> Tu lista</div>
+    <div class="step-eyebrow"><span class="n">1</span> Sube tu base</div>
     <h2>Sube tu lista para marcar</h2>
 
     <div class="filebox" id="fileBox">
@@ -286,6 +298,8 @@ if (typeof XLSX === "undefined") {
       <div class="sub">.xlsx · .xls · .csv</div>
     </div>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+
+    <div id="deteccionBox" class="detbox hidden"></div>
 
     <div id="mapWrap" class="hidden">
       <div class="row2">
@@ -302,7 +316,10 @@ if (typeof XLSX === "undefined") {
         <input type="checkbox" id="chkHeader" checked>
         <label style="margin:0;font-weight:400;">La 1ª fila son títulos</label>
       </div>
-      <button class="btn btn-cyan" id="btnProcesar" style="margin-top:12px;">Procesar lista</button>
+    </div>
+
+    <div id="procesarWrap" class="hidden" style="margin-top:16px;">
+      <button class="btn btn-cyan" id="btnProcesar">Procesar lista</button>
     </div>
 
     <div id="fileError" class="helper hidden" style="background:var(--bad-bg);color:var(--bad);border-color:#f0c9c9;"></div>
@@ -345,7 +362,7 @@ if (typeof XLSX === "undefined") {
 <footer>
   🔒 <b>Qué sale de este teléfono y qué no.</b> Los números de <b>las listas que tú subes</b> se procesan solo en este teléfono y no se almacenan. Sí se guardan en el sistema de la tienda: los contactos de <b>la base que reparte tu gerente</b> y los de clientes que marques como <b>potenciales</b>, para poder darles seguimiento. Lo único que se comparte con tu tienda es el conteo de llamadas y su resultado (con tu ATTUID, sin datos del cliente).<br>
   💾 El historial de llamadas se guarda solo en este navegador. Si cambias de equipo o limpias el caché, se pierde.<br><br>
-  <span style="opacity:.55">Versión: v42</span>
+  <span style="opacity:.55">Versión: v43</span>
 </footer>
 
 <script>
@@ -475,16 +492,100 @@ if (typeof XLSX === "undefined") {
         if(headers.length < maxCols){
           for(var i=headers.length;i<maxCols;i++) headers.push("Columna " + (i+1));
         }
-        fillColumnSelectors();
-        document.getElementById("mapWrap").classList.remove("hidden");
+        var det = fillColumnSelectors();
+        document.getElementById("deteccionBox").classList.remove("hidden");
+        document.getElementById("procesarWrap").classList.remove("hidden");
+        mostrarDeteccion_(det);
       }catch(err){
         errBox.textContent = "No pude procesar ese archivo. Revisa que sea un .xlsx, .xls o .csv válido.";
         errBox.classList.remove("hidden");
         document.getElementById("mapWrap").classList.add("hidden");
+        document.getElementById("deteccionBox").classList.add("hidden");
+        document.getElementById("procesarWrap").classList.add("hidden");
       }
     };
     reader.readAsArrayBuffer(file);
   });
+
+  // ──────────────────────────────────────────────────────────────
+  //  DETECCIÓN AUTOMÁTICA DE COLUMNAS
+  //  Se decide por el CONTENIDO, no por el título de la columna:
+  //  el título puede decir "MSISDN", "Columna 3" o no existir, pero
+  //  un teléfono mexicano siempre son 10 dígitos. Se mira qué
+  //  proporción de cada columna normaliza a un número válido.
+  // ──────────────────────────────────────────────────────────────
+  var MUESTRA_MAX = 300;   // filas que se revisan para decidir
+
+  function _celdasDeColumna(idx, desde){
+    var out = [], fin = Math.min(rawRows.length, desde + MUESTRA_MAX);
+    for(var r = desde; r < fin; r++){
+      var v = rawRows[r] ? rawRows[r][idx] : "";
+      if(v !== "" && v !== null && v !== undefined) out.push(v);
+    }
+    return out;
+  }
+
+  // ¿Qué tan "teléfono" es esta columna? 0 a 1.
+  function _puntajeTelefono(idx, desde){
+    var vals = _celdasDeColumna(idx, desde);
+    if(!vals.length) return 0;
+    var ok = 0;
+    for(var i=0;i<vals.length;i++){ if(normalizePhone(vals[i])) ok++; }
+    return ok / vals.length;
+  }
+
+  // ¿Qué tan "nombre de persona" es? Texto con letras, sin ser número.
+  function _puntajeNombre(idx, desde){
+    var vals = _celdasDeColumna(idx, desde);
+    if(!vals.length) return 0;
+    var ok = 0;
+    for(var i=0;i<vals.length;i++){
+      var s = String(vals[i]).trim();
+      if(s.length >= 2 && s.length <= 60 && /[a-záéíóúñü]/i.test(s) &&
+         !/^\d+$/.test(s.replace(/[\s\-()+]/g,"")) && !normalizePhone(s)) ok++;
+    }
+    return ok / vals.length;
+  }
+
+  // ¿La primera fila son títulos? Lo es si NO parece dato en la columna
+  // que sí trae teléfonos más abajo.
+  function _primeraFilaEsTitulo(idxTel){
+    if(rawRows.length < 2 || idxTel < 0) return true;
+    var primera = rawRows[0] ? rawRows[0][idxTel] : "";
+    var hayDatoDebajo = _puntajeTelefono(idxTel, 1) > 0.5;
+    return hayDatoDebajo && !normalizePhone(primera);
+  }
+
+  // Devuelve {tel, nombre, titulo, confianza}
+  function detectarColumnas(){
+    var nCols = headers.length, i;
+    // se evalúa desde la fila 1 para no dejar que el título ensucie la muestra
+    var desde = rawRows.length > 1 ? 1 : 0;
+
+    var mejorTel = -1, mejorPunt = 0;
+    for(i = 0; i < nCols; i++){
+      var p = _puntajeTelefono(i, desde);
+      // el título ayuda a desempatar, pero no decide por sí solo
+      if(/tel|cel|movil|móvil|numero|número|phone|msisdn|contacto|whats/i.test(headers[i])) p += 0.12;
+      if(p > mejorPunt){ mejorPunt = p; mejorTel = i; }
+    }
+
+    var mejorNom = -1, mejorNomPunt = 0;
+    for(i = 0; i < nCols; i++){
+      if(i === mejorTel) continue;
+      var q = _puntajeNombre(i, desde);
+      if(/nombre|cliente|name|titular|suscriptor/i.test(headers[i])) q += 0.15;
+      if(q > mejorNomPunt){ mejorNomPunt = q; mejorNom = i; }
+    }
+    if(mejorNomPunt < 0.5) mejorNom = -1;   // mejor ningún nombre que uno malo
+
+    return {
+      tel: mejorTel,
+      nombre: mejorNom,
+      titulo: _primeraFilaEsTitulo(mejorTel),
+      confianza: Math.min(mejorPunt, 1)
+    };
+  }
 
   function fillColumnSelectors(){
     var selPhone = document.getElementById("colPhone");
@@ -497,10 +598,44 @@ if (typeof XLSX === "undefined") {
       var o2 = document.createElement("option"); o2.value = i; o2.textContent = h;
       selName.appendChild(o2);
     });
-    headers.forEach(function(h,i){
-      var low = h.toLowerCase();
-      if(/tel|cel|numero|número|phone/.test(low)) selPhone.value = i;
-      if(/nombre|cliente|name/.test(low)) selName.value = i;
+    var d = detectarColumnas();
+    if(d.tel >= 0) selPhone.value = d.tel;
+    selName.value = d.nombre;
+    document.getElementById("chkHeader").checked = d.titulo;
+    return d;
+  }
+
+  function mostrarDeteccion_(d){
+    var box = document.getElementById("deteccionBox");
+    if(!box) return;
+    var manual = document.getElementById("mapWrap");
+
+    if(d.tel < 0 || d.confianza < 0.5){
+      box.className = "detbox mal";
+      box.innerHTML = '<b>No encontré una columna de teléfonos.</b><br>' +
+        'Revisa que el archivo traiga números de 10 dígitos, o elige la columna a mano aquí abajo.';
+      manual.classList.remove("hidden");
+      return;
+    }
+
+    function etiq_(i){
+      if(i < 0) return "sin columna de nombre";
+      return d.titulo ? esc(headers[i]) : ("Columna " + (i + 1));
+    }
+    var filas = Math.max(rawRows.length - (d.titulo ? 1 : 0), 0);
+    box.className = "detbox bien";
+    box.innerHTML =
+      '<div class="dtit">✅ Listo, detecté tu lista sola</div>' +
+      '<div class="drow"><span>Teléfonos</span><b>' + etiq_(d.tel) + '</b></div>' +
+      '<div class="drow"><span>Nombres</span><b>' + etiq_(d.nombre) + '</b></div>' +
+      '<div class="drow"><span>Contactos</span><b>' + filas + '</b></div>' +
+      '<button type="button" class="dlink" id="btnColManual">No es esa columna — elegir a mano</button>';
+
+    manual.classList.add("hidden");
+    var bm = document.getElementById("btnColManual");
+    if(bm) bm.addEventListener("click", function(){
+      manual.classList.remove("hidden");
+      bm.classList.add("hidden");
     });
   }
 

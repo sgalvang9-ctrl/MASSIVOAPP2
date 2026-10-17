@@ -152,6 +152,16 @@ if (typeof XLSX === "undefined") {
   .hidden{display:none!important;}
   .vacio{text-align:center;padding:24px 10px;color:var(--ink-faint);font-size:13px;}
   @media(max-width:400px){ .herotxt h1{font-size:18.5px;} .gap .big{font-size:27px;} }
+  /* ---------- detección automática de columnas ---------- */
+  .detbox{border-radius:10px;padding:14px;margin-bottom:14px;font-size:13px;line-height:1.5;}
+  .detbox.bien{background:#e8f8ef;border:1px solid #bfe6cf;color:#145c37;}
+  .detbox.mal{background:#fdf1de;border:1px solid #f2ddb3;color:#6b4708;}
+  .detbox .dtit{font-weight:800;font-size:14px;margin-bottom:9px;}
+  .detbox .drow{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid rgba(20,92,55,.14);}
+  .detbox .drow span{opacity:.8;}
+  .detbox .drow b{text-align:right;word-break:break-word;}
+  .dlink{display:block;width:100%;margin-top:11px;padding:9px;background:#fff;color:var(--ink-dim);
+    border:1.5px solid var(--line);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;min-height:38px;}
 </style><style>
   .subtabs{display:flex;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;overflow-x:auto;}
   .subtabs::-webkit-scrollbar{display:none;}
@@ -290,13 +300,17 @@ if (typeof XLSX === "undefined") {
         <input type="file" id="baseInput" accept=".xlsx,.xls,.csv" style="display:none">
 
         <div id="baseMap" class="hidden" style="margin-top:14px;">
-          <div class="row2">
-            <div><label>Columna del número</label><select id="baseColTel"></select></div>
-            <div><label>Columna del nombre</label><select id="baseColNom"></select></div>
+          <div id="baseDeteccion" class="detbox hidden"></div>
+
+          <div id="baseColWrap" class="hidden">
+            <div class="row2">
+              <div><label>Columna del número</label><select id="baseColTel"></select></div>
+              <div><label>Columna del nombre</label><select id="baseColNom"></select></div>
+            </div>
+            <label style="display:flex;align-items:center;gap:9px;margin-top:12px;">
+              <input type="checkbox" id="baseHeader" checked style="width:auto"> La 1ª fila son títulos
+            </label>
           </div>
-          <label style="display:flex;align-items:center;gap:9px;margin-top:12px;">
-            <input type="checkbox" id="baseHeader" checked style="width:auto"> La 1ª fila son títulos
-          </label>
 
           <div class="sec" style="margin:18px 2px 9px"><h2 style="font-size:13px">¿A quién se reparte?</h2></div>
           <div id="baseEjecutivos"></div>
@@ -652,6 +666,62 @@ if (typeof XLSX === "undefined") {
     return t;
   }
 
+  // ──────────────────────────────────────────────────────────────
+  //  DETECCIÓN AUTOMÁTICA DE COLUMNAS
+  //  Se decide por el CONTENIDO, no por el título: el archivo puede
+  //  traer "MSISDN", "Columna 3" o no traer títulos, pero un teléfono
+  //  mexicano siempre son 10 dígitos.
+  // ──────────────────────────────────────────────────────────────
+  var MUESTRA_MAX_B = 300;
+
+  function _colB(idx, desde){
+    var out = [], fin = Math.min(baseFilas.length, desde + MUESTRA_MAX_B);
+    for(var r = desde; r < fin; r++){
+      var v = baseFilas[r] ? baseFilas[r][idx] : "";
+      if(v !== "" && v !== null && v !== undefined) out.push(v);
+    }
+    return out;
+  }
+  function _puntTelB(idx, desde){
+    var vals = _colB(idx, desde); if(!vals.length) return 0;
+    var ok = 0; for(var i=0;i<vals.length;i++){ if(normTel(vals[i])) ok++; }
+    return ok / vals.length;
+  }
+  function _puntNomB(idx, desde){
+    var vals = _colB(idx, desde); if(!vals.length) return 0;
+    var ok = 0;
+    for(var i=0;i<vals.length;i++){
+      var t = String(vals[i]).trim();
+      if(t.length >= 2 && t.length <= 60 && /[a-záéíóúñü]/i.test(t) &&
+         !/^\d+$/.test(t.replace(/[\s\-()+]/g,"")) && !normTel(t)) ok++;
+    }
+    return ok / vals.length;
+  }
+  function _tituloB(idxTel){
+    if(baseFilas.length < 2 || idxTel < 0) return true;
+    var primera = baseFilas[0] ? baseFilas[0][idxTel] : "";
+    return _puntTelB(idxTel, 1) > 0.5 && !normTel(primera);
+  }
+  function detectarColumnasBase(){
+    var n = baseCabeceras.length, i;
+    var desde = baseFilas.length > 1 ? 1 : 0;
+    var mejorTel = -1, mejorP = 0;
+    for(i=0;i<n;i++){
+      var p = _puntTelB(i, desde);
+      if(/tel|cel|movil|móvil|numero|número|phone|msisdn|contacto|whats/i.test(baseCabeceras[i])) p += 0.12;
+      if(p > mejorP){ mejorP = p; mejorTel = i; }
+    }
+    var mejorNom = -1, mejorQ = 0;
+    for(i=0;i<n;i++){
+      if(i === mejorTel) continue;
+      var q = _puntNomB(i, desde);
+      if(/nombre|cliente|name|titular|suscriptor/i.test(baseCabeceras[i])) q += 0.15;
+      if(q > mejorQ){ mejorQ = q; mejorNom = i; }
+    }
+    if(mejorQ < 0.5) mejorNom = -1;
+    return { tel: mejorTel, nombre: mejorNom, titulo: _tituloB(mejorTel), confianza: Math.min(mejorP, 1) };
+  }
+
   el("baseBox").addEventListener("click", function(){ el("baseInput").click(); });
 
   el("baseInput").addEventListener("change", function(ev){
@@ -676,11 +746,11 @@ if (typeof XLSX === "undefined") {
           st.insertAdjacentHTML("beforeend", '<option value="'+i+'">'+esc(h)+'</option>');
           sn.insertAdjacentHTML("beforeend", '<option value="'+i+'">'+esc(h)+'</option>');
         });
-        baseCabeceras.forEach(function(h,i){
-          var l = h.toLowerCase();
-          if(/tel|cel|numero|número|phone/.test(l)) st.value = i;
-          if(/nombre|cliente|name/.test(l)) sn.value = i;
-        });
+        var det = detectarColumnasBase();
+        if(det.tel >= 0) st.value = det.tel;
+        sn.value = det.nombre;
+        el("baseHeader").checked = det.titulo;
+        mostrarDeteccionBase_(det);
         pintarEjecutivosReparto();
         el("baseMap").classList.remove("hidden");
       }catch(err){
@@ -709,6 +779,37 @@ if (typeof XLSX === "undefined") {
   function seleccionados(){
     return Array.prototype.filter.call(document.querySelectorAll(".ejchk"), function(c){ return c.checked; })
       .map(function(c){ return c.value; });
+  }
+
+  function mostrarDeteccionBase_(d){
+    var box = el("baseDeteccion"), manual = el("baseColWrap");
+    if(!box || !manual) return;
+    box.classList.remove("hidden");
+
+    if(d.tel < 0 || d.confianza < 0.5){
+      box.className = "detbox mal";
+      box.innerHTML = '<b>No encontré una columna de teléfonos.</b><br>' +
+        'Revisa que el archivo traiga números de 10 dígitos, o elige la columna a mano aquí abajo.';
+      manual.classList.remove("hidden");
+      return;
+    }
+    function etiq_(i){
+      if(i < 0) return "sin columna de nombre";
+      return d.titulo ? esc(baseCabeceras[i]) : ("Columna " + (i + 1));
+    }
+    var filas = Math.max(baseFilas.length - (d.titulo ? 1 : 0), 0);
+    box.className = "detbox bien";
+    box.innerHTML =
+      '<div class="dtit">✅ Detecté las columnas solo</div>' +
+      '<div class="drow"><span>Teléfonos</span><b>' + etiq_(d.tel) + '</b></div>' +
+      '<div class="drow"><span>Nombres</span><b>' + etiq_(d.nombre) + '</b></div>' +
+      '<div class="drow"><span>Filas en el archivo</span><b>' + filas + '</b></div>' +
+      '<button type="button" class="dlink" id="btnColManualBase">No es esa columna — elegir a mano</button>';
+    manual.classList.add("hidden");
+    var b = el("btnColManualBase");
+    if(b) b.addEventListener("click", function(){
+      manual.classList.remove("hidden"); b.classList.add("hidden");
+    });
   }
 
   function calcularReparto(){

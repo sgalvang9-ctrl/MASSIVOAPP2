@@ -78,10 +78,12 @@ if (typeof XLSX === "undefined") {
       radial-gradient(circle at 88% -10%, rgba(0,182,241,.35) 0%, rgba(0,182,241,0) 42%),
       linear-gradient(150deg, var(--navy-deep) 0%, var(--navy) 55%, var(--navy-2) 100%);
     color:#fff;
-    padding:24px 20px 30px;
-    border-radius:0 0 26px 26px;
-    box-shadow:0 12px 28px -16px rgba(8,26,51,.55);
+    padding:13px 16px 15px;
+    border-radius:0 0 18px 18px;
+    box-shadow:0 10px 24px -18px rgba(8,26,51,.55);
   }
+  .hrow{position:relative;display:flex;align-items:center;gap:12px;max-width:640px;margin:0 auto;}
+  .hleft{flex:1;min-width:0;}
   header.top::before{
     content:"";
     position:absolute;
@@ -100,20 +102,21 @@ if (typeof XLSX === "undefined") {
     border:1.5px solid rgba(255,255,255,.08);
     pointer-events:none;
   }
-  .brandrow{position:relative;display:flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:.03em;opacity:.8;margin-bottom:12px;font-weight:600;text-transform:uppercase;}
-  .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 4px rgba(0,182,241,.18);}
-  header.top h1{position:relative;margin:0 0 6px;font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-.02em;}
-  header.top p{position:relative;margin:0;font-size:14px;opacity:.82;line-height:1.5;max-width:34ch;}
+  .brandrow{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.09em;opacity:.72;margin-bottom:3px;font-weight:700;text-transform:uppercase;}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 3px rgba(0,182,241,.18);}
+  header.top h1{margin:0;font-family:var(--font-display);font-size:17px;font-weight:800;letter-spacing:-.02em;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .storepill{
-    position:relative;
-    display:inline-flex;align-items:center;gap:7px;
-    margin-top:14px;background:rgba(255,255,255,.13);
-    backdrop-filter:blur(2px);
-    border:1px solid rgba(255,255,255,.14);
-    padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:600;
+    flex:none;max-width:40%;
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.13);
+    border:1px solid rgba(255,255,255,.16);
+    padding:8px 12px;border-radius:999px;font-size:12px;font-weight:600;
+    color:#fff;font-family:var(--font-body);
     cursor:pointer;transition:background .15s;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    min-height:36px;
   }
-  .storepill:hover{background:rgba(255,255,255,.2);}
+  .storepill:hover{background:rgba(255,255,255,.22);}
 
   main{max-width:640px;margin:0 auto;padding:18px 16px;}
 
@@ -238,8 +241,9 @@ if (typeof XLSX === "undefined") {
   .iconbtn.baja{color:var(--bad);}
   .pill-toggle{display:flex;gap:6px;margin-bottom:12px;background:var(--paper);border:1px solid var(--line);padding:4px;border-radius:var(--radius-sm);}
   .pill-toggle button{
-    flex:1;padding:8px;border-radius:8px;border:none;background:transparent;
-    font-size:12.5px;font-weight:700;color:var(--ink-dim);cursor:pointer;transition:.15s;
+    flex:1;padding:9px 4px;border-radius:8px;border:none;background:transparent;
+    font-size:11.5px;font-weight:700;color:var(--ink-dim);cursor:pointer;transition:.15s;
+    white-space:nowrap;font-family:var(--font-body);min-height:38px;
   }
   .pill-toggle button.active{background:var(--navy);color:#fff;box-shadow:0 3px 8px -3px rgba(11,37,69,.45);}
   .lock-banner{
@@ -275,6 +279,47 @@ if (typeof XLSX === "undefined") {
   .hidden{display:none !important;}
   #fileInput{display:none;}
 
+  /* ---------- panel de trabajo (lo de todos los días) ---------- */
+  .work-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px;}
+  .hint-sm{font-size:12px;font-weight:700;color:var(--cyan);font-family:var(--font-display);}
+  .todaybar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .tb{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 12px;text-align:center;}
+  .tb .n{font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--navy);line-height:1.1;}
+  .tb .l{font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;font-weight:700;}
+
+
+  /* ---------- secciones plegables (se hacen una vez) ---------- */
+  .setup{margin-bottom:14px;}
+  .setup > summary{
+    list-style:none;cursor:pointer;
+    display:flex;align-items:center;gap:10px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;font-family:var(--font-display);font-size:14.5px;font-weight:700;color:var(--ink);
+    box-shadow:var(--shadow-card);min-height:52px;
+  }
+  .setup > summary::-webkit-details-marker{display:none;}
+  .setup > summary::after{content:"⌄";margin-left:auto;font-size:19px;color:var(--ink-faint);line-height:1;transform:translateY(-3px);}
+  .setup[open] > summary::after{content:"⌃";transform:translateY(3px);}
+  .setup[open] > summary{border-radius:var(--radius) var(--radius) 0 0;border-bottom-color:transparent;box-shadow:none;}
+  .setup .sic{font-size:16px;}
+  .setup .sst{font-size:11.5px;font-weight:600;color:var(--ink-faint);font-family:var(--font-body);}
+  .setup-body{border:1px solid var(--line);border-top:none;border-radius:0 0 var(--radius) var(--radius);
+    background:var(--paper);padding:12px 10px 2px;}
+  .setup-body .card{box-shadow:none;}
+
+  /* ---------- detección automática de columnas ---------- */
+  .detbox{border-radius:var(--radius-sm);padding:14px;margin-top:12px;font-size:13px;line-height:1.5;}
+  .detbox.bien{background:var(--good-bg);border:1px solid #bfe6cf;color:#145c37;}
+  .detbox.mal{background:var(--warn-bg);border:1px solid #f2ddb3;color:#6b4708;}
+  .detbox .dtit{font-family:var(--font-display);font-weight:800;font-size:14px;margin-bottom:9px;}
+  .detbox .drow{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid rgba(20,92,55,.14);}
+  .detbox .drow span{opacity:.8;}
+  .detbox .drow b{text-align:right;word-break:break-word;}
+  .dlink{display:block;width:100%;margin-top:11px;padding:9px;background:#fff;color:var(--ink-dim);
+    border:1.5px solid var(--line);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;
+    font-family:var(--font-body);min-height:38px;}
+  .dlink:hover{border-color:var(--cyan);color:var(--navy);}
+
   /* accesibilidad: foco visible en navegación por teclado */
   button:focus-visible, .filebox:focus-visible, .storepill:focus-visible{
     outline:2px solid var(--cyan); outline-offset:2px;
@@ -284,11 +329,13 @@ if (typeof XLSX === "undefined") {
 <body>
 
 <header class="top">
-  <div class="brandrow"><span class="dot"></span> AT&amp;T · Prime MX</div>
-  <h1>📲 Promos por WhatsApp</h1>
-  <p>Manda tus promociones a tu cartera, en tandas seguras y sin perder el hilo.</p>
-  <div class="storepill" id="storePill">⏳ Cargando tu sesión…</div>
-  <div style="color:rgba(255,255,255,.65);font-size:11px;margin-top:5px;">Toca para ajustes</div>
+  <div class="hrow">
+    <div class="hleft">
+      <div class="brandrow"><span class="dot"></span> AT&amp;T · Prime MX</div>
+      <h1>Promos por WhatsApp</h1>
+    </div>
+    <button class="storepill" id="storePill" title="Ajustes">⏳ Cargando…</button>
+  </div>
 </header>
 
 <main>
@@ -325,10 +372,47 @@ if (typeof XLSX === "undefined") {
     <button class="btn btn-cyan" id="btnCargarBase">Trabajar mi base</button>
   </section>
 
-  <!-- PASO 1: SUBIR LISTA -->
+  <!-- ═══ LO DE TODOS LOS DÍAS: TU LISTA DE CONTACTOS ═══ -->
+  <section class="card" id="panelTrabajo">
+    <div class="work-head">
+      <h2 style="margin:0;">Tus contactos</h2>
+      <span class="hint-sm" id="progPct">0%</span>
+    </div>
+
+    <div class="todaybar">
+      <div class="tb"><div class="n" id="statPendientes">0</div><div class="l">Pendientes</div></div>
+      <div class="tb"><div class="n" id="statEnviados">0</div><div class="l">Atendidos</div></div>
+    </div>
+    <div class="progressbar"><div class="fill" id="progFill" style="width:0%"></div></div>
+
+    <div id="emergencyActive" class="hidden" style="background:var(--bad-bg);border:1.5px solid #f0c9c9;border-radius:10px;padding:14px;margin-bottom:12px;text-align:center;">
+      <div style="font-weight:800;color:var(--bad);font-size:14.5px;">🛑 Envío bloqueado — cuenta marcada como restringida</div>
+      <div style="font-size:12.5px;color:var(--ink-dim);margin-top:4px;">Nadie puede enviar desde este dispositivo hasta que lo reactives.</div>
+      <button class="btn btn-ghost btn-sm" id="btnReactivar" style="margin-top:10px;width:auto;padding:8px 16px;">✅ Ya puedo volver a enviar</button>
+    </div>
+
+    <div class="lock-banner hidden" id="lockBanner"></div>
+
+    <div class="pill-toggle">
+      <button id="filtroPendientes" class="active">Pendientes</button>
+      <button id="filtroTodos">Todos</button>
+      <button id="filtroBajas">Bajas</button>
+      <button id="filtroNoExiste">No existe</button>
+    </div>
+
+    <div id="queueList"></div>
+    <div id="queueEmpty" class="empty hidden">Aún no tienes lista cargada.<br><span style="font-size:12.5px;">Ábrela en <b>Preparar envío</b>, aquí abajo.</span></div>
+  </section>
+
+  <!-- ═══ SE HACE UNA VEZ: LISTA Y MENSAJE ═══ -->
+  <details class="setup" id="setupWrap">
+    <summary><span class="sic">⚙️</span> Preparar envío <span class="sst" id="setupEstado">lista y mensaje</span></summary>
+    <div class="setup-body">
+
+  <!-- PASO 1: SUBIR LA BASE -->
   <section class="card">
-    <div class="step-eyebrow"><span class="n">1</span> Tu lista</div>
-    <h2>Sube tu cartera</h2>
+    <div class="step-eyebrow"><span class="n">1</span> Sube tu base</div>
+    <h2>Elige tu archivo</h2>
 
     <div class="filebox" id="fileBox">
       <div class="ic">📄</div>
@@ -337,6 +421,10 @@ if (typeof XLSX === "undefined") {
     </div>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
 
+    <!-- resultado de la detección automática de columnas -->
+    <div id="deteccionBox" class="detbox hidden"></div>
+
+    <!-- selección manual: solo aparece si la detección falló o si la pides -->
     <div id="mapWrap" class="hidden">
       <div class="row2">
         <div>
@@ -352,12 +440,19 @@ if (typeof XLSX === "undefined") {
         <input type="checkbox" id="chkHeader" checked>
         <label style="margin:0;font-weight:400;">La 1ª fila son títulos</label>
       </div>
-      <label>No recontactar si ya se le mandó algo en los últimos (días)</label>
-      <input type="number" id="cfgEnfriamiento" value="21" min="0" max="365">
-      <button class="btn btn-cyan" id="btnProcesar" style="margin-top:12px;">Limpiar y preparar lista para enviar</button>
     </div>
 
-    <div id="fileError" class="lock-banner hidden" style="background:var(--bad-bg);color:var(--bad);"></div>
+    <div id="fileError" class="lock-banner hidden" style="background:var(--bad-bg);color:var(--bad);margin-top:12px;"></div>
+  </section>
+
+  <!-- PASO 2: LIMPIAR Y FILTRAR -->
+  <section class="card hidden" id="procesarWrap">
+    <div class="step-eyebrow"><span class="n">2</span> Limpia y filtra</div>
+    <h2>Quita repetidos, bajas e inválidos</h2>
+
+    <label>No recontactar si ya se le mandó algo en los últimos (días)</label>
+    <input type="number" id="cfgEnfriamiento" value="21" min="0" max="365">
+    <button class="btn btn-cyan" id="btnProcesar" style="margin-top:12px;">Limpiar y preparar lista</button>
 
     <div id="cleanReport" class="hidden" style="margin-top:12px;">
       <div class="statgrid">
@@ -376,10 +471,10 @@ if (typeof XLSX === "undefined") {
     </details>
   </section>
 
-  <!-- PASO 2: MENSAJE -->
+  <!-- TU MENSAJE — se configura una vez y casi nunca cambia -->
   <section class="card">
-    <div class="step-eyebrow"><span class="n">2</span> Tu mensaje</div>
-    <h2>Respuesta rápida + plantilla</h2>
+    <div class="step-eyebrow"><span class="n">💬</span> Tu mensaje</div>
+    <h2>Respuesta rápida de WhatsApp</h2>
 
     <label>Atajo de tu respuesta rápida en WhatsApp Business</label>
     <input type="text" id="atajo" placeholder="renovacion">
@@ -410,53 +505,21 @@ if (typeof XLSX === "undefined") {
       <button class="btn btn-cyan btn-sm" id="btnCopiarAutorizada" style="margin-top:8px;">📋 Copiar mensaje autorizado</button>
     </div>
 
-    <div class="checkrow">
-      <input type="checkbox" id="chkConsentimiento">
-      <label style="margin:0;font-weight:400;">Confirmo que tengo consentimiento de estos clientes para contactarlos con fines mercadotécnicos y que consulté el <a href="#avisoPrivacidad" style="color:var(--navy);">aviso de privacidad</a>.</label>
+    <div class="helper" style="margin-top:16px;">
+      🔒 <b>Ritmo de envío:</b> 15 segundos entre cada mensaje, fijado por tu gerente.
+      Después de cada envío, el botón de WhatsApp del siguiente contacto se bloquea ese tiempo.
+      <input type="number" id="cfgIntervalo" value="15" min="0" max="120" readonly disabled class="hidden">
     </div>
   </section>
 
-  <!-- PASO 3: ENVÍO -->
-  <section class="card">
-    <div class="step-eyebrow"><span class="n">3</span> Envío</div>
-    <h2>Envía de corrido, en tandas seguras</h2>
-
-    <div id="emergencyActive" class="hidden" style="background:var(--bad-bg);border:1.5px solid #f0c9c9;border-radius:10px;padding:14px;margin-bottom:14px;text-align:center;">
-      <div style="font-weight:800;color:var(--bad);font-size:14.5px;">🛑 Envío bloqueado — cuenta marcada como restringida</div>
-      <div style="font-size:12.5px;color:var(--ink-dim);margin-top:4px;">Nadie puede enviar desde este dispositivo hasta que lo reactives.</div>
-      <button class="btn btn-ghost btn-sm" id="btnReactivar" style="margin-top:10px;width:auto;padding:8px 16px;">✅ Ya puedo volver a enviar</button>
     </div>
+  </details>
 
-    <button class="btn btn-danger-ghost btn-sm" id="btnEmergencia" style="margin-bottom:14px;">🛑 Mi cuenta fue restringida — parar todo</button>
-
-    <div class="statgrid">
-      <div class="stat"><div class="num" id="statEnviados">0</div><div class="lbl">Atendidos</div></div>
-      <div class="stat"><div class="num" id="statPendientes">0</div><div class="lbl">Pendientes</div></div>
-    </div>
-    <div class="progressbar"><div class="fill" id="progFill" style="width:0%"></div></div>
-    <div style="font-size:12px;color:var(--ink-dim);text-align:right;" id="progPct">0%</div>
-
-    <div class="lock-banner hidden" id="lockBanner"></div>
-
-    <div style="margin-top:10px;">
-      <label>Segundos entre cada mensaje individual</label>
-      <input type="number" id="cfgIntervalo" value="15" min="0" max="120" readonly disabled style="background:#eef1f5;color:var(--ink-dim);cursor:not-allowed;">
-      <div class="helper" style="margin-top:8px;">🔒 Fijado en 15 segundos por tu gerente — no se puede cambiar desde aquí. Después de cada envío, el botón de WhatsApp del siguiente contacto se bloquea este tiempo.</div>
-    </div>
-
-    <div class="pill-toggle" style="margin-top:14px;">
-      <button id="filtroPendientes" class="active">⏳ Pendientes</button>
-      <button id="filtroTodos">📋 Todos</button>
-      <button id="filtroBajas">Bajas</button>
-      <button id="filtroNoExiste">No existe</button>
-    </div>
-
-    <div id="queueList"></div>
-    <div id="queueEmpty" class="empty hidden">Sube tu archivo en el Paso 1 para ver tu lista aquí.</div>
-
-    <details style="margin-top:14px;">
-      <summary>🛠️ Reporte, respaldo y reinicio</summary>
-      <div style="margin-top:10px;">
+  <!-- ═══ HERRAMIENTAS Y AYUDA ═══ -->
+  <details class="setup">
+    <summary><span class="sic">🛠️</span> Herramientas <span class="sst">reporte, respaldo, emergencia</span></summary>
+    <div class="setup-body">
+      <section class="card">
         <button class="btn btn-ghost btn-sm" id="btnReporte">📊 Generar reporte (PDF)</button>
         <div class="row2" style="margin-top:8px;">
           <button class="btn btn-ghost btn-sm" id="btnExportar">⬇️ Guardar copia de tu historial</button>
@@ -464,20 +527,18 @@ if (typeof XLSX === "undefined") {
         </div>
         <input type="file" id="importFile" accept="application/json" style="display:none;">
         <button class="btn btn-danger-ghost btn-sm" id="btnReset" style="margin-top:8px;">🔄 Reiniciar historial de esta lista</button>
-      </div>
-    </details>
-  </section>
+        <button class="btn btn-danger-ghost btn-sm" id="btnEmergencia" style="margin-top:8px;">🛑 Mi cuenta fue restringida — parar todo</button>
 
-  <!-- CONSEJOS -->
-  <section class="card">
-    <h2 style="font-size:15px;">💡 Para que no te bloqueen el número</h2>
-    <div class="helper" style="margin-top:0;">
-      🐢 No mandes cientos en pocos minutos — el rate limiter de arriba ya te obliga a pausar, respétalo.<br><br>
-      ⭐ Prioriza clientes que ya te conocen o que tienes guardados; casi no reportan.<br><br>
-      🚫 Si alguien te pide que no le escribas, márcalo como "baja" en la lista — no lo vuelvas a subir.<br><br>
-      🖼️ Manda el flyer con moderación; puros archivos idénticos también levantan sospecha.
+        <h2 style="font-size:15px;margin:18px 0 0;">💡 Para que no te bloqueen el número</h2>
+        <div class="helper" style="margin-top:8px;">
+          🐢 No mandes cientos en pocos minutos — la pausa de 15 segundos ya te obliga a ir despacio, respétala.<br><br>
+          ⭐ Prioriza clientes que ya te conocen o que tienes guardados; casi no reportan.<br><br>
+          🚫 Si alguien te pide que no le escribas, márcalo como "baja" en la lista — no lo vuelvas a subir.<br><br>
+          🖼️ Manda el flyer con moderación; puros archivos idénticos también levantan sospecha.
+        </div>
+      </section>
     </div>
-  </section>
+  </details>
 
   </div><!-- /restOfApp -->
 
@@ -487,7 +548,7 @@ if (typeof XLSX === "undefined") {
   🔒 <b>Qué sale de este teléfono y qué no.</b> Los números de <b>las listas que tú subes</b> se procesan solo en este teléfono y no se almacenan. Sí se guardan en el sistema de la tienda: los contactos de <b>la base que reparte tu gerente</b> y los de clientes que marques como <b>potenciales</b>, para poder darles seguimiento. Lo único que se comparte con tu tienda es: el conteo de mensajes que envías (con tu ATTUID, sin datos del cliente) y las marcas de baja o "no existe", guardadas como una huella cifrada que <b>no permite reconstruir el número</b> — sirve solo para que ningún compañero le vuelva a escribir a quien pidió no ser contactado.<br>
   <b>Aviso de privacidad simplificado:</b> los números y nombres que subes se usan únicamente para el envío manual de promociones AT&T por WhatsApp por parte del ejecutivo identificado arriba. No se comparten con terceros. El titular puede solicitar no ser contactado de nuevo respondiendo "BAJA" o pidiéndolo directamente al ejecutivo; esa solicitud debe marcarse en el Paso 3.<br><br>
   💾 El historial de envíos y la lista de bajas se guardan solo en este navegador. Si cambias de equipo o limpias el caché, se pierden — considera exportar tu lista de bajas periódicamente.<br><br>
-  <span style="opacity:.55">Versión: v42</span>
+  <span style="opacity:.55">Versión: v43</span>
 </footer>
 
 <script>
@@ -572,7 +633,10 @@ if (typeof XLSX === "undefined") {
 
   function mostrarApp_(){
     document.getElementById("cardBloqueado").classList.add("hidden");
-    document.getElementById("storePill").textContent = "🏬 " + config.tienda + " · " + config.ejecutivo;
+    // Solo el primer nombre: en el encabezado del teléfono no cabe el nombre
+    // completo y se cortaba a media palabra. La identidad completa se ve en Ajustes.
+    var primerNombre_ = String(config.ejecutivo || "").trim().split(/\s+/)[0] || "";
+    document.getElementById("storePill").textContent = "🏬 " + primerNombre_;
     document.getElementById("cardConfig").classList.add("hidden");
     document.getElementById("restOfApp").classList.remove("hidden");
     aplicarPlantillaAutorizada_();
@@ -634,16 +698,100 @@ if (typeof XLSX === "undefined") {
         if(headers.length < maxCols){
           for(var i=headers.length;i<maxCols;i++) headers.push("Columna " + (i+1));
         }
-        fillColumnSelectors();
-        document.getElementById("mapWrap").classList.remove("hidden");
+        var det = fillColumnSelectors();
+        document.getElementById("deteccionBox").classList.remove("hidden");
+        document.getElementById("procesarWrap").classList.remove("hidden");
+        mostrarDeteccion_(det);
       }catch(err){
         errBox.textContent = "No pude procesar ese archivo. Revisa que sea un .xlsx, .xls o .csv válido y que tenga al menos una columna con números.";
         errBox.classList.remove("hidden");
         document.getElementById("mapWrap").classList.add("hidden");
+        document.getElementById("deteccionBox").classList.add("hidden");
+        document.getElementById("procesarWrap").classList.add("hidden");
       }
     };
     reader.readAsArrayBuffer(file);
   });
+
+  // ──────────────────────────────────────────────────────────────
+  //  DETECCIÓN AUTOMÁTICA DE COLUMNAS
+  //  Se decide por el CONTENIDO, no por el título de la columna:
+  //  el título puede decir "MSISDN", "Columna 3" o no existir, pero
+  //  un teléfono mexicano siempre son 10 dígitos. Se mira qué
+  //  proporción de cada columna normaliza a un número válido.
+  // ──────────────────────────────────────────────────────────────
+  var MUESTRA_MAX = 300;   // filas que se revisan para decidir
+
+  function _celdasDeColumna(idx, desde){
+    var out = [], fin = Math.min(rawRows.length, desde + MUESTRA_MAX);
+    for(var r = desde; r < fin; r++){
+      var v = rawRows[r] ? rawRows[r][idx] : "";
+      if(v !== "" && v !== null && v !== undefined) out.push(v);
+    }
+    return out;
+  }
+
+  // ¿Qué tan "teléfono" es esta columna? 0 a 1.
+  function _puntajeTelefono(idx, desde){
+    var vals = _celdasDeColumna(idx, desde);
+    if(!vals.length) return 0;
+    var ok = 0;
+    for(var i=0;i<vals.length;i++){ if(normalizePhone(vals[i])) ok++; }
+    return ok / vals.length;
+  }
+
+  // ¿Qué tan "nombre de persona" es? Texto con letras, sin ser número.
+  function _puntajeNombre(idx, desde){
+    var vals = _celdasDeColumna(idx, desde);
+    if(!vals.length) return 0;
+    var ok = 0;
+    for(var i=0;i<vals.length;i++){
+      var s = String(vals[i]).trim();
+      if(s.length >= 2 && s.length <= 60 && /[a-záéíóúñü]/i.test(s) &&
+         !/^\d+$/.test(s.replace(/[\s\-()+]/g,"")) && !normalizePhone(s)) ok++;
+    }
+    return ok / vals.length;
+  }
+
+  // ¿La primera fila son títulos? Lo es si NO parece dato en la columna
+  // que sí trae teléfonos más abajo.
+  function _primeraFilaEsTitulo(idxTel){
+    if(rawRows.length < 2 || idxTel < 0) return true;
+    var primera = rawRows[0] ? rawRows[0][idxTel] : "";
+    var hayDatoDebajo = _puntajeTelefono(idxTel, 1) > 0.5;
+    return hayDatoDebajo && !normalizePhone(primera);
+  }
+
+  // Devuelve {tel, nombre, titulo, confianza}
+  function detectarColumnas(){
+    var nCols = headers.length, i;
+    // se evalúa desde la fila 1 para no dejar que el título ensucie la muestra
+    var desde = rawRows.length > 1 ? 1 : 0;
+
+    var mejorTel = -1, mejorPunt = 0;
+    for(i = 0; i < nCols; i++){
+      var p = _puntajeTelefono(i, desde);
+      // el título ayuda a desempatar, pero no decide por sí solo
+      if(/tel|cel|movil|móvil|numero|número|phone|msisdn|contacto|whats/i.test(headers[i])) p += 0.12;
+      if(p > mejorPunt){ mejorPunt = p; mejorTel = i; }
+    }
+
+    var mejorNom = -1, mejorNomPunt = 0;
+    for(i = 0; i < nCols; i++){
+      if(i === mejorTel) continue;
+      var q = _puntajeNombre(i, desde);
+      if(/nombre|cliente|name|titular|suscriptor/i.test(headers[i])) q += 0.15;
+      if(q > mejorNomPunt){ mejorNomPunt = q; mejorNom = i; }
+    }
+    if(mejorNomPunt < 0.5) mejorNom = -1;   // mejor ningún nombre que uno malo
+
+    return {
+      tel: mejorTel,
+      nombre: mejorNom,
+      titulo: _primeraFilaEsTitulo(mejorTel),
+      confianza: Math.min(mejorPunt, 1)
+    };
+  }
 
   function fillColumnSelectors(){
     var selPhone = document.getElementById("colPhone");
@@ -656,11 +804,48 @@ if (typeof XLSX === "undefined") {
       var o2 = document.createElement("option"); o2.value = i; o2.textContent = h;
       selName.appendChild(o2);
     });
-    // intenta adivinar columnas por nombre
-    headers.forEach(function(h,i){
-      var low = h.toLowerCase();
-      if(/tel|cel|numero|número|phone/.test(low)) selPhone.value = i;
-      if(/nombre|cliente|name/.test(low)) selName.value = i;
+
+    var d = detectarColumnas();
+    if(d.tel >= 0) selPhone.value = d.tel;
+    selName.value = d.nombre;
+    document.getElementById("chkHeader").checked = d.titulo;
+    return d;
+  }
+
+  // Mensaje de lo que se detectó, con salida manual si se equivocó.
+  function mostrarDeteccion_(d){
+    var box = document.getElementById("deteccionBox");
+    if(!box) return;
+    var manual = document.getElementById("mapWrap");
+
+    if(d.tel < 0 || d.confianza < 0.5){
+      box.className = "detbox mal";
+      box.innerHTML = '<b>No encontré una columna de teléfonos.</b><br>' +
+        'Revisa que el archivo traiga números de 10 dígitos, o elige la columna a mano aquí abajo.';
+      manual.classList.remove("hidden");
+      return;
+    }
+
+    var filas = Math.max(rawRows.length - (d.titulo ? 1 : 0), 0);
+    // Si el archivo no trae encabezados, headers[] contiene el primer DATO.
+    // Mostrarlo confundiría ("Teléfonos: 4777612220"), así que se nombra por posición.
+    function etiq_(i){
+      if(i < 0) return "sin columna de nombre";
+      return d.titulo ? esc(headers[i]) : ("Columna " + (i + 1));
+    }
+    box.className = "detbox bien";
+    box.innerHTML =
+      '<div class="dtit">✅ Listo, detecté tu lista sola</div>' +
+      '<div class="drow"><span>Teléfonos</span><b>' + etiq_(d.tel) + '</b></div>' +
+      '<div class="drow"><span>Nombres</span><b>' + etiq_(d.nombre) + '</b></div>' +
+      '<div class="drow"><span>Contactos</span><b>' + filas + '</b></div>' +
+      '<button type="button" class="dlink" id="btnColManual">No es esa columna — elegir a mano</button>';
+
+    manual.classList.add("hidden");
+    var bm = document.getElementById("btnColManual");
+    if(bm) bm.addEventListener("click", function(){
+      manual.classList.remove("hidden");
+      bm.classList.add("hidden");
     });
   }
 
@@ -1088,6 +1273,7 @@ if (typeof XLSX === "undefined") {
     var pct = total ? Math.round((sentCount/total)*100) : 0;
     document.getElementById("progFill").style.width = pct + "%";
     document.getElementById("progPct").textContent = pct + "%";
+    ajustarSetup_();
   }
 
   function getEmergency(){ return loadJSON(nsKey("emergency"), null); }
@@ -1137,10 +1323,6 @@ if (typeof XLSX === "undefined") {
   }
 
   function enviarA(c){
-    if(!document.getElementById("chkConsentimiento").checked){
-      alert("Antes de enviar, confirma en el Paso 2 que tienes consentimiento para contactar a estos clientes.");
-      return;
-    }
     if(checkLock()) return;
 
     var atajo = atajoInput.value.replace(/^\//,"").trim() || "";
@@ -1406,6 +1588,27 @@ if (typeof XLSX === "undefined") {
   }
   var btnBase_ = document.getElementById("btnCargarBase");
   if(btnBase_) btnBase_.addEventListener("click", cargarBaseEnCola_);
+
+  // ── "Preparar envío" se abre solo cuando falta configurar algo ──
+  // Si el ejecutivo ya tiene lista y atajo, arranca cerrado para que vea
+  // su lista de contactos de inmediato, que es lo que usa todo el día.
+  function ajustarSetup_(){
+    var wrap = document.getElementById("setupWrap");
+    var est  = document.getElementById("setupEstado");
+    if(!wrap) return;
+    var hayLista = contacts && contacts.length > 0;
+    var hayAtajo = !!(atajoInput && atajoInput.value.trim());
+    var listo = hayLista && hayAtajo;
+    if(est){
+      est.textContent = listo ? "listo"
+        : (!hayLista && !hayAtajo) ? "falta lista y mensaje"
+        : (!hayLista ? "falta tu lista" : "falta tu mensaje");
+    }
+    if(!wrap.dataset.tocado) wrap.open = !listo;
+  }
+  var setupWrap_ = document.getElementById("setupWrap");
+  if(setupWrap_) setupWrap_.addEventListener("toggle", function(){ setupWrap_.dataset.tocado = "1"; });
+  if(atajoInput) atajoInput.addEventListener("input", ajustarSetup_);
 
   setInterval(checkLock, 15000);
 })();
