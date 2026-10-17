@@ -229,14 +229,6 @@ window.LC = {
   },
 
   // ---------- conteo de actividad del día, por ATTUID ----------
-  contarMensajesHoy: function(attuid){
-    var fecha = fechaLocal();
-    return LCDb.collection("envios").where("attuid","==",attuid).where("fecha","==",fecha).get().then(function(snap){ return snap.size; });
-  },
-  contarLlamadasHoy: function(attuid){
-    var fecha = fechaLocal();
-    return LCDb.collection("llamadas").where("attuid","==",attuid).where("fecha","==",fecha).get().then(function(snap){ return snap.size; });
-  },
 
   contarActividadDia: function(attuid, fecha){
     var mensajesQ = LCDb.collection("envios").where("attuid","==",attuid).where("fecha","==",fecha).get();
@@ -653,14 +645,6 @@ window.LC = {
   },
 
   // ¿Este número ya tiene nota? (para mostrarla antes de volver a contactar)
-  seguimientoDe: function(phone){
-    var uid = LCAuth.currentUser ? LCAuth.currentUser.uid : null;
-    if(!uid) return Promise.resolve(null);
-    var id = uid + "_" + String(phone||"").replace(/\D/g,"");
-    return LCDb.collection("seguimientos").doc(id).get()
-      .then(function(d){ return d.exists ? d.data() : null; })
-      .catch(function(){ return null; });
-  },
 
   cerrarSeguimiento: function(phone, estado){
     var uid = LCAuth.currentUser ? LCAuth.currentUser.uid : null;

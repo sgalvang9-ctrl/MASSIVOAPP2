@@ -2,19 +2,27 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ¿Quien consulta es gerente? Se lee de su propio perfil, que a su vez
+    // sólo pudo crearse con el rol que dice la lista blanca.
+    function esGerente(){
+      return request.auth != null
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'gerente';
+    }
+
     // Lista blanca de ATTUIDs autorizados. Se administra a mano desde la
-    // consola de Firebase (Firestore Database → colección "attuidsAutorizados")
-    // — ninguna app puede escribir aquí, solo leer para validar el registro.
+    // consola de Firebase — ninguna app puede escribir aquí, sólo leer.
     match /attuidsAutorizados/{attuid} {
-      allow read: if true;
+      allow read: if request.auth != null;
       allow write: if false;
     }
 
-    // Perfil de cada usuario. Solo el dueño puede leer/crear el suyo.
+    // Perfil de cada usuario. Sólo el dueño puede leer/crear el suyo.
     // El rol y el ATTUID no se pueden auto-asignar ni auto-cambiar:
     // deben coincidir siempre con lo que diga la lista blanca.
+    // El gerente puede leer todos los perfiles (necesita el roster del equipo).
     match /usuarios/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && (request.auth.uid == uid || esGerente());
 
       allow create: if request.auth != null && request.auth.uid == uid
         && exists(/databases/$(database)/documents/attuidsAutorizados/$(request.resource.data.attuid))
@@ -26,6 +34,70 @@ service cloud.firestore {
         && request.resource.data.attuid == resource.data.attuid;
 
       allow delete: if false;
+    }
+
+    // Mensajes enviados. Cada quien escribe los suyos; todos los autenticados
+    // pueden leer (el tablero muestra el ranking del equipo).
+    match /envios/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Llamadas registradas. Mismo criterio que envíos.
+    match /llamadas/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Estado de contactos de Promos. Se guarda por huella irreversible del
+    // teléfono, nunca el número en claro.
+    match /promosContactos/{id} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Checklist diario. Lo escribe su dueño; lo lee su dueño o el gerente.
+    match /checklistDias/{id} {
+      allow read: if request.auth != null
+        && (resource.data.uid == request.auth.uid || esGerente());
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // Cuotas, metas y agregados publicados. Todos leen, sólo el gerente escribe.
+    match /config/{doc} {
+      allow read: if request.auth != null;
+      allow write: if esGerente();
+    }
+
+    // Seguimientos (clientes potenciales). Cada ejecutivo ve sólo los suyos;
+    // el gerente ve todos.
+    match /seguimientos/{id} {
+      allow read: if request.auth != null
+        && (resource.data.uid == request.auth.uid || esGerente());
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null
+        && (resource.data.uid == request.auth.uid || esGerente());
+      allow delete: if esGerente();
+    }
+
+    // Base repartida por el gerente. Él la escribe; el ejecutivo sólo puede
+    // marcar como atendido lo que le toca a él.
+    // OJO: "asignadoA" guarda el ATTUID del ejecutivo, no su uid de Auth.
+    // Por eso se compara contra el attuid de su propio perfil.
+    function miAttuid(){
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.attuid;
+    }
+    match /baseAsignada/{id} {
+      allow read: if request.auth != null
+        && (esGerente() || resource.data.asignadoA == miAttuid());
+      allow create: if esGerente();
+      allow update: if esGerente()
+        || (request.auth != null && resource.data.asignadoA == miAttuid());
+      allow delete: if esGerente();
     }
 
   }
