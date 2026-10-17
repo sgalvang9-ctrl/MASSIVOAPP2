@@ -15,6 +15,7 @@ if (typeof XLSX === "undefined") {
 }
 </script>
 <script src="firebase-init.js"></script>
+<script src="fotos.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -153,6 +154,35 @@ if (typeof XLSX === "undefined") {
   .vacio{text-align:center;padding:24px 10px;color:var(--ink-faint);font-size:13px;}
   @media(max-width:400px){ .herotxt h1{font-size:18.5px;} .gap .big{font-size:27px;} }
   /* ---------- detección automática de columnas ---------- */
+  /* ---------- tarjetas de cuota ---------- */
+  .cuCard{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:14px;margin-bottom:11px;box-shadow:var(--shadow);}
+  .cuTop{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .cuFoto{flex:none;width:52px;height:52px;border-radius:14px;object-fit:cover;
+    background:linear-gradient(135deg,var(--navy-2),var(--navy));display:flex;
+    align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px;
+    border:2px solid var(--line);}
+  .cuNom{flex:1;min-width:0;}
+  .cuNom .n{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cuNom .a{font-size:11px;color:var(--ink-faint);font-family:var(--fn);margin-top:2px;}
+  .cuTag{flex:none;font-size:10px;font-weight:800;padding:4px 9px;border-radius:999px;
+    text-transform:uppercase;letter-spacing:.04em;}
+  .cuTag.ind{background:var(--cyan-dim,#00b6f11c);color:var(--navy-2);}
+  .cuTag.gen{background:var(--paper);color:var(--ink-faint);}
+  .cuMet{display:flex;gap:10px;}
+  .cuMet > div{flex:1;min-width:0;}
+  .cuEtq{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--ink-faint);margin-bottom:5px;}
+  .cuVal{font-family:var(--fn);font-size:15px;font-weight:800;line-height:1.1;}
+  .cuVal small{font-weight:600;font-size:12px;color:var(--ink-faint);}
+  .cuBar{height:7px;background:var(--paper);border-radius:999px;overflow:hidden;margin:6px 0 4px;}
+  .cuBar i{display:block;height:100%;border-radius:999px;transition:width .3s;}
+  .cuPie{font-size:11px;color:var(--ink-dim);}
+  .cuTot{display:flex;justify-content:space-between;gap:10px;background:var(--card);
+    border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:13px;
+    font-size:12.5px;font-weight:700;}
+  .cuTot b{font-family:var(--fn);}
+
   .detbox{border-radius:10px;padding:14px;margin-bottom:14px;font-size:13px;line-height:1.5;}
   .detbox.bien{background:#e8f8ef;border:1px solid #bfe6cf;color:#145c37;}
   .detbox.mal{background:#fdf1de;border:1px solid #f2ddb3;color:#6b4708;}
@@ -240,6 +270,7 @@ if (typeof XLSX === "undefined") {
   <button class="on" data-v="0">🏪 Tienda</button>
   <button data-v="1">👥 Mi equipo</button>
   <button data-v="2" id="tabDetalle">🔍 Detalle</button>
+  <button data-v="4">🎯 Cuotas</button>
   <button data-v="3">📥 Base</button>
 </div>
 
@@ -286,6 +317,12 @@ if (typeof XLSX === "undefined") {
       <div id="alertasEquipo"></div>
       <div class="sec"><h2>Clientes potenciales</h2><span class="hint" id="hintPot">—</span></div>
       <div class="card" id="potEquipo"><div class="vacio">Cargando…</div></div>
+    </div>
+
+    <!-- CUOTAS -->
+    <div class="vista" id="v4">
+      <div class="sec"><h2>Cuotas del equipo</h2><span class="hint" id="cuHint">semana en curso</span></div>
+      <div id="cuotasLista"><div class="vacio">Cargando…</div></div>
     </div>
 
     <!-- BASE -->
@@ -385,7 +422,7 @@ if (typeof XLSX === "undefined") {
     el("alertasTienda").innerHTML = ""; el("alertasEquipo").innerHTML = "";
     el("detalleContenido").innerHTML = '<div class="vacio">Toca a un ejecutivo en la pestaña "Mi equipo".</div>';
     return LC.resumenEquipo(sem).then(function(r){
-      datos = r; pintarTienda(); pintarEquipo(); cargarPotenciales();
+      datos = r; pintarTienda(); pintarEquipo(); pintarCuotas(); cargarPotenciales();
       // publicar solo los promedios, para que cada ejecutivo se compare sin ver a nadie
       var activs = datos.filas.map(function(f){ return f.activaciones; });
       var conts  = datos.filas.map(function(f){ return f.contactos; }).filter(function(c){ return c > 0; });
@@ -485,6 +522,88 @@ if (typeof XLSX === "undefined") {
   }
 
   // ── VISTA 2: EQUIPO ──
+  // ──────────────────────────────────────────────────────────────
+  //  VISTA DE CUOTAS
+  //  Una tarjeta por ejecutivo con su foto, su cuota semanal y diaria,
+  //  y qué tanto lleva. Pensada para verse de un vistazo en la junta.
+  // ──────────────────────────────────────────────────────────────
+  function avatarHTML_(f){
+    var src = (typeof window.fotoDe === "function") ? window.fotoDe(f.attuid) : null;
+    if(src){
+      // onerror: si la foto no carga, cae a las iniciales en vez de dejar un hueco
+      return '<img class="cuFoto" src="' + esc(src) + '" alt="' + esc(f.nombre) + '" ' +
+             'loading="lazy" onerror="this.outerHTML=\'<div class=&quot;cuFoto&quot;>' +
+             esc(ini(f.nombre)) + '</div>\'">';
+    }
+    return '<div class="cuFoto">' + esc(ini(f.nombre)) + '</div>';
+  }
+
+  function metricaCuota_(etiqueta, hecho, cuotaSemana, diasPiso){
+    if(!cuotaSemana){
+      return '<div><div class="cuEtq">' + etiqueta + '</div>' +
+             '<div class="cuVal">' + hecho + ' <small>sin cuota</small></div>' +
+             '<div class="cuBar"><i style="width:0%;background:var(--line)"></i></div>' +
+             '<div class="cuPie">Define su cuota en el Tablero.</div></div>';
+    }
+    var pct = Math.round(hecho / cuotaSemana * 100);
+    var faltan = Math.max(cuotaSemana - hecho, 0);
+    var diaria = Math.ceil(cuotaSemana / (diasPiso || 6));
+    return '<div><div class="cuEtq">' + etiqueta + '</div>' +
+      '<div class="cuVal">' + hecho + ' <small>/ ' + cuotaSemana + '</small></div>' +
+      '<div class="cuBar"><i style="width:' + Math.min(pct,100) + '%;background:' + gradPct(pct) + '"></i></div>' +
+      '<div class="cuPie">' + (faltan === 0 ? "✅ cumplida" : "faltan <b>" + faltan + "</b>") +
+      ' · ' + diaria + '/día</div></div>';
+  }
+
+  function pintarCuotas(){
+    var caja = el("cuotasLista");
+    if(!caja) return;
+    var filas = (datos && datos.filas ? datos.filas : [])
+      .filter(function(f){ return (f.rol || "ejecutivo") !== "gerente"; });
+
+    if(!filas.length){ caja.innerHTML = '<div class="vacio">No hay ejecutivos en la lista.</div>'; return; }
+
+    var dias = (cuotas && cuotas.diasPiso) || 6;
+    var sumM = 0, sumL = 0, cuoM = 0, cuoL = 0;
+    filas.forEach(function(f){
+      var c = LC.cuotaDe(cuotas, f.attuid);
+      sumM += f.mensajes; sumL += f.llamadas;
+      cuoM += c.mensajesSemana; cuoL += c.llamadasSemana;
+    });
+
+    var total = '<div class="cuTot"><span>Mensajes de la tienda</span>' +
+      '<b>' + sumM.toLocaleString("es-MX") + ' / ' + cuoM.toLocaleString("es-MX") + '</b></div>' +
+      '<div class="cuTot"><span>Llamadas de la tienda</span>' +
+      '<b>' + sumL.toLocaleString("es-MX") + ' / ' + cuoL.toLocaleString("es-MX") + '</b></div>';
+
+    // primero quien va más atrasado: es a quien hay que empujar
+    filas = filas.slice().sort(function(a,b){
+      function av(f){
+        var c = LC.cuotaDe(cuotas, f.attuid);
+        var t = c.mensajesSemana + c.llamadasSemana;
+        return t > 0 ? (f.mensajes + f.llamadas) / t : 99;
+      }
+      return av(a) - av(b);
+    });
+
+    caja.innerHTML = total + filas.map(function(f){
+      var c = LC.cuotaDe(cuotas, f.attuid);
+      return '<div class="cuCard">' +
+        '<div class="cuTop">' + avatarHTML_(f) +
+          '<div class="cuNom"><div class="n">' + esc(f.nombre) + '</div>' +
+          '<div class="a">' + esc(f.attuid) + '</div></div>' +
+          '<span class="cuTag ' + (c.individual ? "ind" : "gen") + '">' +
+            (c.individual ? "individual" : "general") + '</span>' +
+        '</div>' +
+        '<div class="cuMet">' +
+          metricaCuota_("Mensajes", f.mensajes, c.mensajesSemana, dias) +
+          metricaCuota_("Llamadas", f.llamadas, c.llamadasSemana, dias) +
+        '</div></div>';
+    }).join("");
+
+    el("cuHint").textContent = filas.length + " ejecutivos · " + dias + " días de piso";
+  }
+
   function pintarEquipo(){
     var mk = cuotas.kpis || {};
     var metaActivInd = (Number(mk.pospagoNuevo)||0)+(Number(mk.pospagoPropio)||0)+(Number(mk.renovacion)||0);
@@ -639,7 +758,7 @@ if (typeof XLSX === "undefined") {
     Array.prototype.forEach.call(el("subtabs").querySelectorAll("button"), function(b,j){
       b.classList.toggle("on", i===j);
     });
-    for(var k=0;k<4;k++){ var v = el("v"+k); if(v) v.classList.toggle("on", i===k); }
+    for(var k=0;k<5;k++){ var v = el("v"+k); if(v) v.classList.toggle("on", i===k); }
     window.scrollTo({top:0,behavior:"smooth"});
   }
   Array.prototype.forEach.call(document.querySelectorAll("#subtabs button"), function(b){
