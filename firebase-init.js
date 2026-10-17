@@ -279,11 +279,15 @@ window.LC = {
         mensajesSemana: d.mensajesSemana || 0,
         llamadasSemana: d.llamadasSemana || 0,
         diasPiso: d.diasPiso || 6,
+        // Total de la tienda, el que el gerente reparte entre su equipo.
+        // Se guarda para que al volver vea de cuánto partió.
+        totalMensajes: d.totalMensajes || 0,
+        totalLlamadas: d.totalLlamadas || 0,
         porAttuid: d.porAttuid || {},   // cuotas individuales que pisan la general
         kpis: d.kpis || { pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpuConEquipo:0, arpuSoloServicio:0, arpuRenovaciones:0, citas:0, campanas:0, resenas:0 }
       };
     }).catch(function(){
-      return { mensajesSemana:0, llamadasSemana:0, diasPiso:6, porAttuid:{},
+      return { mensajesSemana:0, llamadasSemana:0, diasPiso:6, totalMensajes:0, totalLlamadas:0, porAttuid:{},
                kpis:{ pospagoNuevo:0, pospagoPropio:0, renovacion:0, accesorios:0, seguros:0, arpuConEquipo:0, arpuSoloServicio:0, arpuRenovaciones:0, citas:0, campanas:0, resenas:0 } };
     });
   },
@@ -293,6 +297,8 @@ window.LC = {
       mensajesSemana: Number(cuotas.mensajesSemana) || 0,
       llamadasSemana: Number(cuotas.llamadasSemana) || 0,
       diasPiso: Number(cuotas.diasPiso) || 6,
+      totalMensajes: Number(cuotas.totalMensajes) || 0,
+      totalLlamadas: Number(cuotas.totalLlamadas) || 0,
       actualizadoEn: firebase.firestore.FieldValue.serverTimestamp(),
       actualizadoPor: LCAuth.currentUser ? LCAuth.currentUser.uid : null
     };
