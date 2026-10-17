@@ -151,6 +151,15 @@
     font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);}
   .ind-head .sp{flex:1;}
   .ind-head span.w{flex:none;width:62px;text-align:center;}
+  /* ---------- dispersión de cuota ---------- */
+  .ind-chk{flex:none;width:22px;display:flex;align-items:center;justify-content:center;}
+  .ind-chk input{width:19px;height:19px;accent-color:var(--cyan);cursor:pointer;margin:0;}
+  .ind-head span.c{flex:none;width:22px;}
+  .ind-row.fuera{opacity:.45;}
+  .dispres{margin-top:12px;padding:11px 13px;border-radius:10px;font-size:12.5px;font-weight:700;line-height:1.5;}
+  .dispres.ok{background:var(--good-bg);border:1px solid #bfe6cf;color:var(--good);}
+  .dispres.dif{background:var(--warn-bg);border:1px solid #f2ddb3;color:var(--warn);}
+  .dispres .ln{display:flex;justify-content:space-between;gap:10px;}
   .semnav{display:flex;align-items:center;gap:10px;justify-content:center;padding:9px;margin-bottom:11px;
     background:#fff;border-radius:var(--radius-sm);box-shadow:var(--shadow);}
   .semnav button{width:32px;height:32px;border-radius:9px;border:1.5px solid var(--line);background:#fff;
@@ -346,9 +355,20 @@
       <div class="nota">Estos números salen del Checklist de cada ejecutivo — nadie los captura dos veces.</div>
     </div>
 
+    <div class="sec"><h2>Dispersión de cuota</h2><span class="hint">reparte el total de la tienda</span></div>
+    <div class="card">
+      <div class="row2">
+        <div><label>Total mensajes / semana</label><input type="number" min="0" id="dispMensajes" placeholder="0"></div>
+        <div><label>Total llamadas / semana</label><input type="number" min="0" id="dispLlamadas" placeholder="0"></div>
+      </div>
+      <button class="btn btn-ghost" id="btnRepartirCuota" style="margin-top:12px;">Repartir entre los marcados</button>
+      <div class="nota">Se reparte parejo entre quienes dejes marcados abajo. El sobrante cae en los primeros de la lista. Después puedes ajustar celda por celda.</div>
+    </div>
+
     <div class="sec"><h2>Cuota por ejecutivo</h2><span class="hint">deja vacío para usar la general</span></div>
     <div class="card">
       <div id="listaIndividual"><div class="vacio">Cargando equipo…</div></div>
+      <div id="dispResumen" class="dispres hidden"></div>
       <button class="btn" id="btnGuardarIndividual">Guardar cuotas individuales</button>
     </div>
   </div>
@@ -727,12 +747,16 @@
 
   function pintarCuotasIndividuales(){
     LC.listarEquipo().then(function(equipo){
+      // El gerente no entra: no se mide contra la cuota del equipo ni aparece
+      // en el ranking, así que tampoco debe comerse una parte del reparto.
+      equipo = equipo.filter(function(p){ return (p.rol || "ejecutivo") !== "gerente"; });
       if(!equipo.length){ el("listaIndividual").innerHTML = '<div class="vacio">No hay ejecutivos en la lista.</div>'; return; }
-      var head = '<div class="ind-head"><span style="width:33px"></span><span class="sp">Ejecutivo</span>' +
+      var head = '<div class="ind-head"><span class="c"></span><span style="width:33px"></span><span class="sp">Ejecutivo</span>' +
                  '<span class="w">Msj/sem</span><span class="w">Llam/sem</span></div>';
       el("listaIndividual").innerHTML = head + equipo.map(function(p){
         var ind = (cuotas.porAttuid && cuotas.porAttuid[p.attuid]) || {};
         return '<div class="ind-row" data-attuid="' + esc(p.attuid) + '">' +
+          '<div class="ind-chk"><input type="checkbox" class="qc" checked title="Entra al reparto"></div>' +
           '<div class="ind-av">' + esc(iniciales(p.nombre)) + '</div>' +
           '<div class="ind-nom">' + esc(p.nombre) + '</div>' +
           '<div class="ind-in"><input type="number" min="0" class="qm" placeholder="—" value="' +
@@ -741,9 +765,93 @@
             (ind.llamadasSemana || "") + '"></div>' +
         '</div>';
       }).join("");
+      conectarDispersion_();
+      actualizarResumenDisp_();
     }).catch(function(){
       el("listaIndividual").innerHTML = '<div class="vacio">No se pudo cargar el equipo.</div>';
     });
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  //  DISPERSIÓN DE CUOTA
+  //  El gerente captura el total de la tienda, el sistema propone el
+  //  reparto parejo entre los marcados, y él ajusta lo que quiera.
+  //  El resumen le dice en todo momento cuánto lleva repartido.
+  // ──────────────────────────────────────────────────────────────
+  function filasDisp_(){ return Array.prototype.slice.call(document.querySelectorAll(".ind-row")); }
+
+  function repartirParejo_(total, n){
+    // Reparto exacto: el sobrante se distribuye de uno en uno entre los
+    // primeros, para que la suma cuadre siempre con el total capturado.
+    var out = [], base = Math.floor(total / n), resto = total % n;
+    for(var i = 0; i < n; i++) out.push(base + (i < resto ? 1 : 0));
+    return out;
+  }
+
+  function repartirCuota_(){
+    var totM = Number(el("dispMensajes").value) || 0;
+    var totL = Number(el("dispLlamadas").value) || 0;
+    var dentro = filasDisp_().filter(function(r){ return r.querySelector(".qc").checked; });
+    if(!dentro.length){ alert("Marca al menos un ejecutivo para repartir."); return; }
+    if(!totM && !totL){ alert("Captura el total de mensajes o de llamadas de la tienda."); return; }
+
+    var m = repartirParejo_(totM, dentro.length);
+    var l = repartirParejo_(totL, dentro.length);
+    dentro.forEach(function(r, i){
+      if(totM) r.querySelector(".qm").value = m[i];
+      if(totL) r.querySelector(".ql").value = l[i];
+    });
+    // a quien se dejó fuera se le limpia la cuota: usará la general
+    filasDisp_().forEach(function(r){
+      if(!r.querySelector(".qc").checked){
+        r.querySelector(".qm").value = "";
+        r.querySelector(".ql").value = "";
+      }
+    });
+    actualizarResumenDisp_();
+  }
+
+  function actualizarResumenDisp_(){
+    var box = el("dispResumen");
+    if(!box) return;
+    var totM = Number(el("dispMensajes").value) || 0;
+    var totL = Number(el("dispLlamadas").value) || 0;
+    if(!totM && !totL){ box.classList.add("hidden"); return; }
+
+    var sumM = 0, sumL = 0;
+    filasDisp_().forEach(function(r){
+      r.classList.toggle("fuera", !r.querySelector(".qc").checked);
+      sumM += Number(r.querySelector(".qm").value) || 0;
+      sumL += Number(r.querySelector(".ql").value) || 0;
+    });
+
+    function linea(etq, suma, total){
+      if(!total) return "";
+      var d = suma - total;
+      var cola = d === 0 ? "cuadra"
+               : (d > 0 ? "sobran " + d : "faltan " + Math.abs(d));
+      return '<div class="ln"><span>' + etq + '</span><span>' +
+             suma.toLocaleString("es-MX") + " de " + total.toLocaleString("es-MX") +
+             " · " + cola + '</span></div>';
+    }
+    var cuadra = (!totM || sumM === totM) && (!totL || sumL === totL);
+    box.className = "dispres " + (cuadra ? "ok" : "dif");
+    box.innerHTML = linea("Mensajes", sumM, totM) + linea("Llamadas", sumL, totL);
+    box.classList.remove("hidden");
+  }
+
+  var dispConectada_ = false;
+  function conectarDispersion_(){
+    filasDisp_().forEach(function(r){
+      r.querySelector(".qm").addEventListener("input", actualizarResumenDisp_);
+      r.querySelector(".ql").addEventListener("input", actualizarResumenDisp_);
+      r.querySelector(".qc").addEventListener("change", actualizarResumenDisp_);
+    });
+    if(dispConectada_) return;
+    dispConectada_ = true;
+    el("btnRepartirCuota").addEventListener("click", repartirCuota_);
+    el("dispMensajes").addEventListener("input", actualizarResumenDisp_);
+    el("dispLlamadas").addEventListener("input", actualizarResumenDisp_);
   }
 
   function zonaGerente(){
@@ -766,14 +874,20 @@
           };
         }
       });
+      var totM = Number(el("dispMensajes").value) || 0;
+      var totL = Number(el("dispLlamadas").value) || 0;
       LC.setCuotas({
         mensajesSemana: cuotas.mensajesSemana,
         llamadasSemana: cuotas.llamadasSemana,
         diasPiso: cuotas.diasPiso,
+        totalMensajes: totM,
+        totalLlamadas: totL,
         porAttuid: mapa,
         kpis: cuotas.kpis || {}
       }).then(function(){
         cuotas.porAttuid = mapa;
+        cuotas.totalMensajes = totM;
+        cuotas.totalLlamadas = totL;
         return Promise.all([cargarMiDia(), cargarMiSemana(), cargarRanking()]);
       }).catch(function(e){
         alert("No se pudieron guardar: " + (e && e.message ? e.message : e));
@@ -784,6 +898,8 @@
     el("cuotaMensajes").value = cuotas.mensajesSemana || "";
     el("cuotaLlamadas").value = cuotas.llamadasSemana || "";
     el("cuotaDias").value = cuotas.diasPiso || 6;
+    el("dispMensajes").value = cuotas.totalMensajes || "";
+    el("dispLlamadas").value = cuotas.totalLlamadas || "";
     var mk = cuotas.kpis || {};
     el("kPospagoNuevo").value  = mk.pospagoNuevo  || "";
     el("kPospagoPropio").value = mk.pospagoPropio || "";
