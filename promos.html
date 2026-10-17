@@ -287,16 +287,6 @@ if (typeof XLSX === "undefined") {
   .tb .n{font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--navy);line-height:1.1;}
   .tb .l{font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;font-weight:700;}
 
-  .consentbar{
-    display:flex;gap:10px;align-items:flex-start;
-    background:var(--warn-bg);border:1px solid #f2ddb3;border-radius:var(--radius-sm);
-    padding:11px 12px;margin:12px 0;font-size:12.5px;line-height:1.45;color:#6b4708;
-    transition:background .2s,border-color .2s,color .2s;
-  }
-  .consentbar input{width:auto;flex:none;margin-top:1px;accent-color:var(--cyan);min-width:18px;min-height:18px;}
-  .consentbar label{margin:0;font-weight:500;color:inherit;font-size:12.5px;}
-  .consentbar a{color:inherit;font-weight:700;}
-  .consentbar.ok{background:var(--good-bg);border-color:#bfe6cf;color:var(--good);}
 
   /* ---------- secciones plegables (se hacen una vez) ---------- */
   .setup{margin-bottom:14px;}
@@ -395,11 +385,6 @@ if (typeof XLSX === "undefined") {
     </div>
     <div class="progressbar"><div class="fill" id="progFill" style="width:0%"></div></div>
 
-    <div class="consentbar" id="consentBar">
-      <input type="checkbox" id="chkConsentimiento">
-      <label for="chkConsentimiento">Confirmo que tengo consentimiento de estos clientes para contactarlos y que consulté el <a href="#avisoPrivacidad">aviso de privacidad</a>.</label>
-    </div>
-
     <div id="emergencyActive" class="hidden" style="background:var(--bad-bg);border:1.5px solid #f0c9c9;border-radius:10px;padding:14px;margin-bottom:12px;text-align:center;">
       <div style="font-weight:800;color:var(--bad);font-size:14.5px;">🛑 Envío bloqueado — cuenta marcada como restringida</div>
       <div style="font-size:12.5px;color:var(--ink-dim);margin-top:4px;">Nadie puede enviar desde este dispositivo hasta que lo reactives.</div>
@@ -424,10 +409,10 @@ if (typeof XLSX === "undefined") {
     <summary><span class="sic">⚙️</span> Preparar envío <span class="sst" id="setupEstado">lista y mensaje</span></summary>
     <div class="setup-body">
 
-  <!-- PASO 1: SUBIR LISTA -->
+  <!-- PASO 1: SUBIR LA BASE -->
   <section class="card">
-    <div class="step-eyebrow"><span class="n">1</span> Tu lista</div>
-    <h2>Sube tu cartera</h2>
+    <div class="step-eyebrow"><span class="n">1</span> Sube tu base</div>
+    <h2>Elige tu archivo</h2>
 
     <div class="filebox" id="fileBox">
       <div class="ic">📄</div>
@@ -457,13 +442,17 @@ if (typeof XLSX === "undefined") {
       </div>
     </div>
 
-    <div id="procesarWrap" class="hidden" style="margin-top:16px;">
-      <label>No recontactar si ya se le mandó algo en los últimos (días)</label>
-      <input type="number" id="cfgEnfriamiento" value="21" min="0" max="365">
-      <button class="btn btn-cyan" id="btnProcesar" style="margin-top:12px;">Limpiar y preparar lista para enviar</button>
-    </div>
+    <div id="fileError" class="lock-banner hidden" style="background:var(--bad-bg);color:var(--bad);margin-top:12px;"></div>
+  </section>
 
-    <div id="fileError" class="lock-banner hidden" style="background:var(--bad-bg);color:var(--bad);"></div>
+  <!-- PASO 2: LIMPIAR Y FILTRAR -->
+  <section class="card hidden" id="procesarWrap">
+    <div class="step-eyebrow"><span class="n">2</span> Limpia y filtra</div>
+    <h2>Quita repetidos, bajas e inválidos</h2>
+
+    <label>No recontactar si ya se le mandó algo en los últimos (días)</label>
+    <input type="number" id="cfgEnfriamiento" value="21" min="0" max="365">
+    <button class="btn btn-cyan" id="btnProcesar" style="margin-top:12px;">Limpiar y preparar lista</button>
 
     <div id="cleanReport" class="hidden" style="margin-top:12px;">
       <div class="statgrid">
@@ -482,10 +471,10 @@ if (typeof XLSX === "undefined") {
     </details>
   </section>
 
-  <!-- PASO 2: MENSAJE -->
+  <!-- TU MENSAJE — se configura una vez y casi nunca cambia -->
   <section class="card">
-    <div class="step-eyebrow"><span class="n">2</span> Tu mensaje</div>
-    <h2>Respuesta rápida + plantilla</h2>
+    <div class="step-eyebrow"><span class="n">💬</span> Tu mensaje</div>
+    <h2>Respuesta rápida de WhatsApp</h2>
 
     <label>Atajo de tu respuesta rápida en WhatsApp Business</label>
     <input type="text" id="atajo" placeholder="renovacion">
@@ -1334,12 +1323,6 @@ if (typeof XLSX === "undefined") {
   }
 
   function enviarA(c){
-    if(!document.getElementById("chkConsentimiento").checked){
-      alert("Antes de enviar, marca la casilla de consentimiento que está arriba de tu lista de contactos.");
-      var cb_ = document.getElementById("consentBar");
-      if(cb_) cb_.scrollIntoView({behavior:"smooth", block:"center"});
-      return;
-    }
     if(checkLock()) return;
 
     var atajo = atajoInput.value.replace(/^\//,"").trim() || "";
@@ -1605,15 +1588,6 @@ if (typeof XLSX === "undefined") {
   }
   var btnBase_ = document.getElementById("btnCargarBase");
   if(btnBase_) btnBase_.addEventListener("click", cargarBaseEnCola_);
-
-  // ── consentimiento: la barra cambia a verde una vez confirmado ──
-  var chkCons_ = document.getElementById("chkConsentimiento");
-  var barCons_ = document.getElementById("consentBar");
-  function pintarConsent_(){
-    if(barCons_ && chkCons_) barCons_.classList.toggle("ok", chkCons_.checked);
-  }
-  if(chkCons_) chkCons_.addEventListener("change", pintarConsent_);
-  pintarConsent_();
 
   // ── "Preparar envío" se abre solo cuando falta configurar algo ──
   // Si el ejecutivo ya tiene lista y atajo, arranca cerrado para que vea
