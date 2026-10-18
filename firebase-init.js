@@ -433,11 +433,18 @@ window.LC = {
       window.LC.contarActividadSemana(semana),
       window.LC.kpisEquipoSemana(semana),
       window.LC.listarEquipo(),
-      window.LC.actividadEquipoPorDia(semana)
+      window.LC.actividadEquipoPorDia(semana),
+      window.LC.attuidsConocidos()
     ]).then(function(r){
       var act = r[0] || {}, kpis = r[1] || {}, equipo = r[2] || [], porDia = r[3] || {};
+      var conocidos = r[4] || {};
       var msj = act.mensajesPorAttuid || {}, llm = act.llamadasPorAttuid || {};
+      // "vistos" arranca con TODA la lista blanca, incluidos los dados de baja.
+      // Así quien ya salió de la tienda simplemente desaparece del equipo, en
+      // vez de reaparecer como "sin perfil" por la actividad que alcanzó a
+      // registrar antes de irse.
       var vistos = {};
+      Object.keys(conocidos).forEach(function(a){ vistos[a] = true; });
       equipo.forEach(function(p){ vistos[p.attuid] = true; });
       var attuidGerente = null;
       equipo.forEach(function(p){ if((p.rol||"") === "gerente") attuidGerente = p.attuid; });
@@ -699,6 +706,20 @@ window.LC = {
   },
 
   // Lista de todo el equipo (para el ranking), desde la lista blanca
+  // Todos los ATTUID que alguna vez se dieron de alta, estén activos o no.
+  // Sirve para distinguir a quien salió de la tienda (sale del equipo y ya)
+  // de alguien que nunca se dio de alta (eso sí es un error que hay que ver).
+  attuidsConocidos: function(){
+    return LCDb.collection("attuidsAutorizados").get().then(function(snap){
+      var out = {};
+      snap.forEach(function(doc){ out[doc.id] = doc.data().activo === true; });
+      return out;
+    }).catch(function(e){
+      console.warn("attuidsConocidos falló:", e && e.code, e && e.message);
+      return {};
+    });
+  },
+
   listarEquipo: function(){
     return LCDb.collection("attuidsAutorizados").get().then(function(snap){
       var out = [];
