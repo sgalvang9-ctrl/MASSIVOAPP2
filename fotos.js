@@ -17,7 +17,11 @@
 //  más para eso.
 // ──────────────────────────────────────────────────────────────────────
 window.LC_FOTOS = {
-  // "LM164E": "fotos/a7f3c9d2e1.jpg",
+  "CH950E": "fotos/090f9abc96.jpg",   // Yarazet Hernández
+  "EC4641": "fotos/ad5cc02e7a.jpg",   // Erick Gómez
+  "LM165E": "fotos/5a7add5dc2.jpg",   // Manuel Roldán
+  "MR648V": "fotos/44684b8e14.jpg",   // Elizabeth Reyes
+  "VB9809": "fotos/76c1310ace.jpg",   // Eduardo Saavedra
 };
 
 // Devuelve la ruta de la foto de alguien, o null si no tiene.
