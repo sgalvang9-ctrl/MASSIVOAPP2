@@ -307,13 +307,32 @@ window.LC = {
     return LCDb.collection("config").doc("cuotas").set(doc, {merge:true});
   },
 
-  // Cuota semanal efectiva de una persona: la suya si la tiene, si no la del equipo
+  // Lista de metas de venta que admiten valor individual.
+  // Las contables se pueden repartir desde un total de tienda; los ARPU no,
+  // porque son promedios por venta y repartirlos no significa nada.
+  KPIS_CONTABLES: ["pospagoNuevo","pospagoPropio","renovacion","accesorios","seguros",
+                   "citas","campanas","resenas"],
+  KPIS_ARPU: ["arpuConEquipo","arpuSoloServicio","arpuRenovaciones"],
+
+  // Cuota semanal efectiva de una persona: la suya si la tiene, si no la del equipo.
+  // Lo mismo aplica meta por meta en venta: cada una cae a la general si no
+  // tiene valor individual, así que se puede ajustar solo lo que haga falta.
   cuotaDe: function(cuotas, attuid){
     var ind = (cuotas && cuotas.porAttuid && cuotas.porAttuid[attuid]) || null;
+    var gen = (cuotas && cuotas.kpis) || {};
+    var kind = (ind && ind.kpis) || {};
+    var kpis = {}, hayKpiInd = false;
+    window.LC.KPIS_CONTABLES.concat(window.LC.KPIS_ARPU).forEach(function(k){
+      var v = Number(kind[k]);
+      if(v > 0){ kpis[k] = v; hayKpiInd = true; }
+      else kpis[k] = Number(gen[k]) || 0;
+    });
     return {
       mensajesSemana: (ind && Number(ind.mensajesSemana)) || Number(cuotas.mensajesSemana) || 0,
       llamadasSemana: (ind && Number(ind.llamadasSemana)) || Number(cuotas.llamadasSemana) || 0,
-      individual: !!ind
+      kpis: kpis,
+      individual: !!(ind && (ind.mensajesSemana || ind.llamadasSemana)),
+      kpisIndividuales: hayKpiInd
     };
   },
 
@@ -422,9 +441,15 @@ window.LC = {
       equipo.forEach(function(p){ vistos[p.attuid] = true; });
       var attuidGerente = null;
       equipo.forEach(function(p){ if((p.rol||"") === "gerente") attuidGerente = p.attuid; });
+      // Alguien con actividad registrada pero sin perfil en la lista de
+      // autorizados. Antes se le inventaba el ATTUID como nombre y en
+      // pantalla salía "LM164E · LM164E", que parece un ejecutivo real.
+      // Se marca como dato incompleto para que el gerente sepa que lo que
+      // hay que arreglar es el alta, no la persona.
       Object.keys(msj).concat(Object.keys(llm)).concat(Object.keys(kpis)).forEach(function(a){
         if(a && a !== "(sin ATTUID)" && a !== attuidGerente && !vistos[a]){
-          vistos[a] = true; equipo.push({attuid:a, nombre:a});
+          vistos[a] = true;
+          equipo.push({ attuid:a, nombre:"⚠️ Sin perfil dado de alta", sinPerfil:true });
         }
       });
       // El gerente no cuenta para cuotas ni promedios del equipo
@@ -437,6 +462,7 @@ window.LC = {
         var activaciones = k.pospagoNuevo + k.pospagoPropio + k.renovacion;
         return {
           attuid: p.attuid, nombre: p.nombre, rol: p.rol || "ejecutivo",
+          sinPerfil: !!p.sinPerfil,
           mensajes: m, llamadas: l, contactos: contactos,
           activaciones: activaciones, kpis: k,
           cierre: contactos > 0 ? Math.round(activaciones / contactos * 1000) / 10 : null,

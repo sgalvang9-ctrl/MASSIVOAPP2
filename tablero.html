@@ -352,7 +352,26 @@
         <div></div>
       </div>
       <button class="btn" id="btnGuardarKpis">Guardar metas de venta</button>
-      <div class="nota">Estos números salen del Checklist de cada ejecutivo — nadie los captura dos veces.</div>
+      <div class="nota">Estos números salen del Checklist de cada ejecutivo — nadie los captura dos veces. Esta meta aplica a quien no tenga una propia.</div>
+    </div>
+
+    <div class="sec"><h2>Meta de venta por ejecutivo</h2><span class="hint">deja vacío para usar la general</span></div>
+    <div class="card">
+      <label>Ejecutivo</label>
+      <select id="metaQuien"><option value="">Cargando…</option></select>
+
+      <div id="metaCampos" style="margin-top:14px;"></div>
+
+      <button class="btn" id="btnGuardarMetaInd" style="margin-top:14px;">Guardar la meta de esta persona</button>
+      <button class="btn btn-ghost" id="btnLimpiarMetaInd" style="margin-top:8px;">Quitarle la meta propia (usar la general)</button>
+      <div class="nota" id="metaNota">Lo que dejes vacío cae a la meta general, campo por campo.</div>
+    </div>
+
+    <div class="sec"><h2>Repartir venta de la tienda</h2><span class="hint">solo las metas que se cuentan</span></div>
+    <div class="card">
+      <div id="repVentaCampos"></div>
+      <button class="btn btn-ghost" id="btnRepartirVenta" style="margin-top:12px;">Repartir entre los marcados arriba</button>
+      <div class="nota">Reparte el total de la tienda entre los ejecutivos que dejaste marcados en la dispersión de cuota. Los ARPU no se reparten: son promedios por venta, así que la meta es la misma para todos salvo que se la cambies a alguien a mano.</div>
     </div>
 
     <div class="sec"><h2>Dispersión de cuota</h2><span class="hint">reparte el total de la tienda</span></div>
@@ -678,7 +697,7 @@
     var semana = semanaVista;
     return LC.kpisSemana(perfil.attuid, semana).then(function(k){
       if(!k){ el("ventaVacio").textContent = "Sin datos de venta esta semana."; return; }
-      var metas = cuotas.kpis || {};
+      var metas = LC.cuotaDe(cuotas, perfil.attuid).kpis;
       var hayMeta = KPIS.some(function(x){ return Number(metas[x[0]]) > 0; });
       var hayDato = KPIS.some(function(x){ return Number(k[x[0]]) > 0; });
       if(!hayMeta && !hayDato){
@@ -721,8 +740,8 @@
         el("tablaVentaEquipo").innerHTML = '<div class="vacio">Nadie ha capturado venta esta semana.</div>';
         return;
       }
-      var metas = cuotas.kpis || {};
       el("tablaVentaEquipo").innerHTML = attuids.map(function(a){
+        var metas = LC.cuotaDe(cuotas, a).kpis;
         var k = datos[a];
         var total = k.pospagoNuevo + k.pospagoPropio + k.renovacion;
         var metaTot = (Number(metas.pospagoNuevo)||0) + (Number(metas.pospagoPropio)||0) + (Number(metas.renovacion)||0);
@@ -840,6 +859,146 @@
     box.classList.remove("hidden");
   }
 
+  // ──────────────────────────────────────────────────────────────
+  //  METAS DE VENTA POR EJECUTIVO
+  //  Cada meta cae a la general si se deja vacía, así que el gerente
+  //  solo captura lo que de verdad quiere distinto en esa persona.
+  // ──────────────────────────────────────────────────────────────
+  var equipoMetas_ = [];
+
+  function pintarCamposMeta_(){
+    var a = el("metaQuien").value;
+    var caja = el("metaCampos");
+    if(!a){ caja.innerHTML = '<div class="vacio">Elige a alguien de la lista.</div>'; return; }
+    var gen = cuotas.kpis || {};
+    var ind = ((cuotas.porAttuid || {})[a] || {}).kpis || {};
+    caja.innerHTML = KPIS.map(function(k){
+      var campo = k[0];
+      var g = Number(gen[campo]) || 0;
+      return '<label style="margin-top:10px;">' + k[2] + ' ' + esc(k[1]) + '</label>' +
+        '<input type="number" min="0" step="any" class="mkind" data-k="' + campo + '" ' +
+        'placeholder="' + (g ? "general: " + g : "sin meta general") + '" ' +
+        'value="' + (Number(ind[campo]) > 0 ? ind[campo] : "") + '">';
+    }).join("");
+  }
+
+  function pintarRepartoVenta_(){
+    var caja = el("repVentaCampos");
+    if(!caja) return;
+    var gen = cuotas.kpis || {};
+    caja.innerHTML = KPIS.filter(function(k){
+      return LC.KPIS_CONTABLES.indexOf(k[0]) !== -1;
+    }).map(function(k){
+      return '<label style="margin-top:10px;">' + k[2] + ' Total de tienda · ' + esc(k[1]) + '</label>' +
+        '<input type="number" min="0" class="rvta" data-k="' + k[0] + '" placeholder="0">';
+    }).join("");
+  }
+
+  function guardarMetaIndividual_(limpiar){
+    var a = el("metaQuien").value;
+    if(!a){ alert("Elige primero a un ejecutivo."); return; }
+    var btn = limpiar ? el("btnLimpiarMetaInd") : el("btnGuardarMetaInd");
+    var txt = btn.textContent;
+    btn.disabled = true; btn.textContent = "Guardando…";
+
+    var porAttuid = JSON.parse(JSON.stringify(cuotas.porAttuid || {}));
+    porAttuid[a] = porAttuid[a] || {};
+
+    if(limpiar){
+      delete porAttuid[a].kpis;
+    }else{
+      var kp = {};
+      Array.prototype.forEach.call(document.querySelectorAll(".mkind"), function(inp){
+        var v = Number(inp.value);
+        if(v > 0) kp[inp.getAttribute("data-k")] = v;
+      });
+      if(Object.keys(kp).length) porAttuid[a].kpis = kp;
+      else delete porAttuid[a].kpis;
+    }
+    // si a esa persona ya no le queda nada propio, se le quita la entrada
+    if(!porAttuid[a].kpis && !porAttuid[a].mensajesSemana && !porAttuid[a].llamadasSemana){
+      delete porAttuid[a];
+    }
+
+    LC.setCuotas({
+      mensajesSemana: cuotas.mensajesSemana, llamadasSemana: cuotas.llamadasSemana,
+      diasPiso: cuotas.diasPiso, totalMensajes: cuotas.totalMensajes,
+      totalLlamadas: cuotas.totalLlamadas, porAttuid: porAttuid, kpis: cuotas.kpis || {}
+    }).then(function(){
+      cuotas.porAttuid = porAttuid;
+      pintarCamposMeta_();
+      el("metaNota").textContent = limpiar
+        ? "Listo: esa persona vuelve a la meta general."
+        : "Listo: su meta quedó guardada.";
+      return Promise.all([cargarMiSemana(), cargarRanking()]);
+    }).catch(function(e){
+      alert("No se pudo guardar: " + (e && e.message ? e.message : e));
+    }).finally(function(){
+      btn.disabled = false; btn.textContent = txt;
+    });
+  }
+
+  function repartirVenta_(){
+    var dentro = filasDisp_().filter(function(r){ return r.querySelector(".qc").checked; });
+    if(!dentro.length){ alert("Marca arriba, en la dispersión de cuota, entre quiénes se reparte."); return; }
+
+    var totales = {};
+    Array.prototype.forEach.call(document.querySelectorAll(".rvta"), function(inp){
+      var v = Number(inp.value) || 0;
+      if(v > 0) totales[inp.getAttribute("data-k")] = v;
+    });
+    if(!Object.keys(totales).length){ alert("Captura al menos un total de tienda."); return; }
+
+    var attuids = dentro.map(function(r){ return r.getAttribute("data-attuid"); });
+    if(!confirm("Se reparten entre " + attuids.length + " ejecutivos y se les sobrescribe su meta de venta propia. ¿Continuar?")) return;
+
+    var btn = el("btnRepartirVenta"), txt = btn.textContent;
+    btn.disabled = true; btn.textContent = "Repartiendo…";
+
+    var porAttuid = JSON.parse(JSON.stringify(cuotas.porAttuid || {}));
+    attuids.forEach(function(a, i){
+      porAttuid[a] = porAttuid[a] || {};
+      var kp = porAttuid[a].kpis || {};
+      Object.keys(totales).forEach(function(campo){
+        kp[campo] = repartirParejo_(totales[campo], attuids.length)[i];
+      });
+      porAttuid[a].kpis = kp;
+    });
+
+    LC.setCuotas({
+      mensajesSemana: cuotas.mensajesSemana, llamadasSemana: cuotas.llamadasSemana,
+      diasPiso: cuotas.diasPiso, totalMensajes: cuotas.totalMensajes,
+      totalLlamadas: cuotas.totalLlamadas, porAttuid: porAttuid, kpis: cuotas.kpis || {}
+    }).then(function(){
+      cuotas.porAttuid = porAttuid;
+      pintarCamposMeta_();
+      alert("✅ Listo: meta de venta repartida entre " + attuids.length + " ejecutivos.");
+      return Promise.all([cargarMiSemana(), cargarRanking()]);
+    }).catch(function(e){
+      alert("No se pudo repartir: " + (e && e.message ? e.message : e));
+    }).finally(function(){
+      btn.disabled = false; btn.textContent = txt;
+    });
+  }
+
+  function conectarMetasInd_(){
+    LC.listarEquipo().then(function(eq){
+      equipoMetas_ = eq.filter(function(p){ return (p.rol || "ejecutivo") !== "gerente"; });
+      el("metaQuien").innerHTML = '<option value="">— Elige un ejecutivo —</option>' +
+        equipoMetas_.map(function(p){
+          return '<option value="' + esc(p.attuid) + '">' + esc(p.nombre) + '</option>';
+        }).join("");
+      pintarCamposMeta_();
+    }).catch(function(){
+      el("metaQuien").innerHTML = '<option value="">No se pudo cargar el equipo</option>';
+    });
+    pintarRepartoVenta_();
+    el("metaQuien").addEventListener("change", pintarCamposMeta_);
+    el("btnGuardarMetaInd").addEventListener("click", function(){ guardarMetaIndividual_(false); });
+    el("btnLimpiarMetaInd").addEventListener("click", function(){ guardarMetaIndividual_(true); });
+    el("btnRepartirVenta").addEventListener("click", repartirVenta_);
+  }
+
   var dispConectada_ = false;
   function conectarDispersion_(){
     filasDisp_().forEach(function(r){
@@ -858,6 +1017,7 @@
     if(!perfil || perfil.rol !== "gerente") return;
     el("zonaGerente").classList.remove("hidden");
     pintarCuotasIndividuales();
+    conectarMetasInd_();
 
     el("btnGuardarIndividual").addEventListener("click", function(){
       var btn = this;
