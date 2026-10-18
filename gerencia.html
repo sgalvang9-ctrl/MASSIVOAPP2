@@ -457,7 +457,13 @@ if (typeof XLSX === "undefined") {
   function pintarTienda(){
     var t = datos.totales, n = datos.filas.length || 1;
     var mk = cuotas.kpis || {};
-    var metaActiv = ((Number(mk.pospagoNuevo)||0) + (Number(mk.pospagoPropio)||0) + (Number(mk.renovacion)||0)) * n;
+    // La meta de la tienda es la SUMA de las metas de cada quien. Antes se
+    // multiplicaba la general por el número de ejecutivos, lo que ignoraba
+    // cualquier ajuste individual.
+    var metaActiv = datos.filas.reduce(function(acc, f){
+      var km = LC.cuotaDe(cuotas, f.attuid).kpis;
+      return acc + (Number(km.pospagoNuevo)||0) + (Number(km.pospagoPropio)||0) + (Number(km.renovacion)||0);
+    }, 0);
     var pct = metaActiv > 0 ? Math.round(t.activaciones/metaActiv*100) : null;
     var faltan = Math.max(metaActiv - t.activaciones, 0);
     var dias = (cuotas.diasPiso||6), transcurridos = diaDePiso(), restantes = Math.max(dias - transcurridos, 0);
@@ -605,13 +611,16 @@ if (typeof XLSX === "undefined") {
   }
 
   function pintarEquipo(){
-    var mk = cuotas.kpis || {};
-    var metaActivInd = (Number(mk.pospagoNuevo)||0)+(Number(mk.pospagoPropio)||0)+(Number(mk.renovacion)||0);
     var filas = datos.filas.slice().sort(function(a,b){ return b.activaciones - a.activaciones; });
+    function metaActivDe_(attuid){
+      var km = LC.cuotaDe(cuotas, attuid).kpis;
+      return (Number(km.pospagoNuevo)||0)+(Number(km.pospagoPropio)||0)+(Number(km.renovacion)||0);
+    }
 
     el("tablaEquipo").innerHTML =
       '<table><thead><tr><th>Ejecutivo</th><th>Msj</th><th>Llam</th><th>Activ</th><th>Cierre</th><th>Días 0</th></tr></thead><tbody>' +
       filas.map(function(f){
+        var metaActivInd = metaActivDe_(f.attuid);
         var pctA = metaActivInd > 0 ? Math.round(f.activaciones/metaActivInd*100) : null;
         var cierreTxt = f.cierre === null ? "—" : (f.cierre + "%");
         var claseC = "";
@@ -700,7 +709,8 @@ if (typeof XLSX === "undefined") {
     var f = datos.filas.filter(function(x){ return x.attuid === attuid; })[0];
     if(!f){ el("detalleContenido").innerHTML = '<div class="vacio">No se encontró.</div>'; return; }
 
-    var mk = cuotas.kpis || {};
+    var cuotaF = LC.cuotaDe(cuotas, f.attuid);
+    var mk = cuotaF.kpis;
     var cmp = (datos.promedioCierre !== null && f.cierre !== null)
       ? (f.cierre >= datos.promedioCierre ? "arriba" : "abajo") : null;
 
