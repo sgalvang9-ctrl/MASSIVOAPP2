@@ -16,7 +16,7 @@
   :root {
     --bg: #f3f6fa; --surface: #FFFFFF; --surface2: #eef1f5;
     --border: #e4e9ef; --border-dark: #c7d2de; --text: #0f1c30;
-    --text-muted: #5c6b7d; --text-light: #8a97a8;
+    --text-muted: #5c6b7d; --text-light: #636f7e;
     --accent: #00b6f1; --accent-light: #00b6f11c; --accent-mid: #4dcdf7;
     --accent-dark: #0b2545; --accent-navy2: #123a6b; --accent-deep: #081a33;
     --danger: #c53434; --danger-light: #fdeaea;
@@ -33,7 +33,7 @@
     background:
       radial-gradient(circle at 92% -20%, rgba(0,182,241,.35) 0%, rgba(0,182,241,0) 42%),
       linear-gradient(150deg, var(--accent-deep) 0%, var(--accent-dark) 55%, var(--accent-navy2) 100%);
-    color: #fff; padding: 20px 40px; position: sticky; top: 0; z-index: 100;
+    color: #fff; padding: 12px 16px; position: sticky; top: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between; gap: 20px;
     box-shadow: 0 8px 20px -12px rgba(8,26,51,.5);
   }
@@ -77,7 +77,7 @@
   .section-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
   .card-full { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
-  .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .card-title { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
   .card-title::before { content: ''; display: block; width: 3px; height: 14px; border-radius: 2px; background: var(--accent); }
 
   /* FIELDS */
@@ -281,6 +281,56 @@
     .field-row-4 { grid-template-columns: 1fr 1fr; }
     .compromiso-row { gap: 6px; }
   }
+  /* ── identidad compacta en el encabezado ── */
+  .ident{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:8px 10px 8px 14px;
+    font-size:13px;font-weight:600;color:#fff;max-width:100%;min-height:44px;}
+  .ident-nom{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw;}
+  .ident-sep{opacity:.5;}
+  .ident-att{font-family:'DM Mono','Roboto Mono',monospace;font-size:12px;opacity:.85;}
+  .ident-edit{width:30px;height:30px;flex:none;border-radius:50%;border:none;cursor:pointer;
+    background:rgba(255,255,255,.18);color:#fff;font-size:13px;line-height:1;}
+
+  /* ── los 7 días caben sin desplazar; antes jueves en adelante quedaban fuera ── */
+  .week-selector{display:flex;gap:4px;padding:6px 8px;overflow:visible;}
+  .day-tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:0;padding:5px 2px;min-height:46px;border-radius:11px;
+    border:1.5px solid var(--border);background:var(--surface);margin:0;
+    color:var(--text-muted);font-size:11.5px;transition:.15s;}
+  .day-tab b{font-size:15px;font-weight:800;line-height:1;}
+  .day-tab .dnom{font-size:10px;font-weight:600;opacity:.8;}
+  .day-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .day-tab.has-data{border-color:var(--accent-mid);}
+  .day-tab.has-data:not(.active){background:var(--accent-light);color:var(--accent);}
+  .day-tab .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:0;margin:0;}
+  .day-tab.has-data .dot{opacity:.9;}
+  .day-tab.summary-tab{flex:1.3;background:var(--surface2);border-color:var(--border);}
+  .day-tab.summary-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  /* ── qué días faltan por capturar ── */
+  .avance-sem{margin:0 10px 10px;padding:10px 13px;border-radius:10px;font-size:12.5px;
+    font-weight:600;line-height:1.45;display:none;}
+  .avance-sem.falta{display:block;background:#fdf1de;border:1px solid #f2ddb3;color:#6b4708;}
+  .avance-sem.completo{display:block;background:#e8f8ef;border:1px solid #bfe6cf;color:#145c37;}
+
+  /* targets táctiles: la × de quitar fila medía 17px */
+  .del-row-btn{min-width:44px;min-height:44px;font-size:17px;}
+  /* En teléfono el subtítulo repite lo que ya dice el título y el encabezado
+     es lo que más estorba, así que se oculta. En pantalla grande se conserva. */
+  @media (max-width: 760px){
+    .sub-oculto{display:none;}
+    .header-left h1{font-size:16px;}
+    .avance-sem{margin:0 8px 8px;padding:8px 11px;font-size:12px;}
+  }
+  @media (max-width: 760px){
+    header{flex-wrap:wrap;}
+    .header-meta{width:100%;gap:8px;flex-wrap:wrap;}
+    .ident{flex:1 1 100%;}
+    /* la semana cabe al lado, no debajo */
+    .header-field{flex-direction:row;align-items:center;gap:8px;}
+    .header-field label{font-size:10px;white-space:nowrap;opacity:.7;}
+    .header-field input{min-width:0;flex:1;min-height:40px;}
+  }
 </style>
 <style>
   /* NAME GATE OVERLAY */
@@ -312,16 +362,22 @@
 <header>
   <div class="header-left">
     <h1><span style="color:var(--accent);font-weight:800;">●</span> Check List de Salida <span class="semana-tag" id="semana-label">Semana —</span></h1>
-    <p id="header-sub">León Centro · Registro diario de actividad</p>
+    <p id="header-sub" class="sub-oculto">León Centro · Registro diario de actividad</p>
   </div>
   <div class="header-meta">
-    <div class="header-field" id="field-ejecutivo">
-      <label>Ejecutivo <span style="color:#FFD166">*</span></label>
-      <input type="text" id="ejecutivo-name" placeholder="Nombre completo (obligatorio)" oninput="updateHeader()" required>
+    <div class="ident" id="identChip">
+      <span class="ident-nom" id="identNombre">—</span>
+      <span class="ident-sep">·</span>
+      <span class="ident-att" id="identAttuid">—</span>
+      <button type="button" class="ident-edit" id="btnEditarIdent" onclick="toggleIdent()" title="Corregir">✎</button>
     </div>
-    <div class="header-field">
+    <div class="header-field hidden" id="field-ejecutivo">
+      <label>Ejecutivo <span style="color:#FFD166">*</span></label>
+      <input type="text" id="ejecutivo-name" placeholder="Nombre completo (obligatorio)" oninput="updateHeader();pintarIdent()" required>
+    </div>
+    <div class="header-field hidden" id="field-attuid">
       <label>ATTUID</label>
-      <input type="text" id="ejecutivo-attuid" placeholder="ATTUID" oninput="saveChecklistConfig()">
+      <input type="text" id="ejecutivo-attuid" placeholder="ATTUID" oninput="saveChecklistConfig();pintarIdent()">
     </div>
     <div class="header-field">
       <label>Semana del</label>
@@ -334,15 +390,16 @@
 </header>
 
 <div class="week-selector" id="week-selector">
-  <button class="day-tab active" data-day="0">Lunes<span class="dot"></span></button>
-  <button class="day-tab" data-day="1">Martes<span class="dot"></span></button>
-  <button class="day-tab" data-day="2">Miércoles<span class="dot"></span></button>
-  <button class="day-tab" data-day="3">Jueves<span class="dot"></span></button>
-  <button class="day-tab" data-day="4">Viernes<span class="dot"></span></button>
-  <button class="day-tab" data-day="5">Sábado<span class="dot"></span></button>
-  <button class="day-tab" data-day="6">Domingo<span class="dot"></span></button>
-  <button class="day-tab summary-tab" data-day="7">📊 Resumen semanal</button>
+  <button class="day-tab active" data-day="0"><b>L</b><span class="dnom">Lun</span><span class="dot"></span></button>
+  <button class="day-tab" data-day="1"><b>M</b><span class="dnom">Mar</span><span class="dot"></span></button>
+  <button class="day-tab" data-day="2"><b>M</b><span class="dnom">Mié</span><span class="dot"></span></button>
+  <button class="day-tab" data-day="3"><b>J</b><span class="dnom">Jue</span><span class="dot"></span></button>
+  <button class="day-tab" data-day="4"><b>V</b><span class="dnom">Vie</span><span class="dot"></span></button>
+  <button class="day-tab" data-day="5"><b>S</b><span class="dnom">Sáb</span><span class="dot"></span></button>
+  <button class="day-tab" data-day="6"><b>D</b><span class="dnom">Dom</span><span class="dot"></span></button>
+  <button class="day-tab summary-tab" data-day="7"><b>📊</b><span class="dnom">Resumen</span></button>
 </div>
+<div class="avance-sem" id="avanceSemana"></div>
 
 <main>
   <div id="days-container"></div>
@@ -529,7 +586,7 @@ function buildCorteRow(d, idx) {
     <td><input type="number" min="0" placeholder="0.00" id="${d}-corte-cant-${idx}" oninput="renderSummary()"></td>
     <td><input type="text" placeholder="Nombre del receptor" id="${d}-corte-entregado-${idx}"></td>
     <td><input type="text" placeholder="0000" id="${d}-corte-recibo-${idx}"></td>
-    <td><button onclick="removeRow(this.closest('tr'))" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:16px;padding:4px">×</button></td>
+    <td><button onclick="removeRow(this.closest('tr'))" class="del-row-btn" title="Quitar fila" style="background:none;border:none;cursor:pointer;color:var(--text-muted);">×</button></td>
   </tr>`;
 }
 
@@ -537,7 +594,7 @@ function buildCitaConfRow(d, idx) {
   return `<tr id="${d}-citasconf-row-${idx}">
     <td><select id="${d}-citasconf-tipo-${idx}"><option value="">—</option><option>POS</option><option>REN</option></select></td>
     <td><input type="text" placeholder="Teléfono o nombre" id="${d}-citasconf-detalle-${idx}"></td>
-    <td><button onclick="removeRow(this.closest('tr'))" style="background:none;border:none;cursor:pointer;color:var(--text-light);font-size:16px;padding:4px">×</button></td>
+    <td><button onclick="removeRow(this.closest('tr'))" class="del-row-btn" title="Quitar fila" style="background:none;border:none;cursor:pointer;color:var(--text-muted);">×</button></td>
   </tr>`;
 }
 
@@ -607,6 +664,52 @@ function removeRow(row) { row.remove(); }
 function markDirty(dayIdx) {
   document.querySelector(`.day-tab[data-day="${dayIdx}"]`).classList.add('has-data');
   programarAutoguardado(DAYS[dayIdx], dayIdx);
+  pintarAvanceSemana();
+}
+
+// ── Identidad compacta ──────────────────────────────────────────
+// Nombre y ATTUID vienen de la sesión. Antes ocupaban dos campos de
+// formulario completos en el encabezado; ahora son un renglón.
+function pintarIdent(){
+  var n = document.getElementById('ejecutivo-name');
+  var a = document.getElementById('ejecutivo-attuid');
+  var cn = document.getElementById('identNombre');
+  var ca = document.getElementById('identAttuid');
+  if(!cn || !ca) return;
+  cn.textContent = (n && n.value.trim()) || 'Sin nombre';
+  ca.textContent = (a && a.value.trim()) || 'sin ATTUID';
+}
+function toggleIdent(){
+  var f1 = document.getElementById('field-ejecutivo');
+  var f2 = document.getElementById('field-attuid');
+  if(!f1 || !f2) return;
+  var abierto = !f1.classList.contains('hidden');
+  f1.classList.toggle('hidden', abierto);
+  f2.classList.toggle('hidden', abierto);
+  if(!abierto){ var n = document.getElementById('ejecutivo-name'); if(n) n.focus(); }
+}
+
+// ── Avance de la semana ─────────────────────────────────────────
+// Dice qué días faltan por capturar. Antes había que abrir día por día
+// para saberlo, y por eso se quedaban huecos sin que nadie los viera.
+function pintarAvanceSemana(){
+  var caja = document.getElementById('avanceSemana');
+  if(!caja) return;
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.day-tab[data-day]'))
+    .filter(function(t){ return Number(t.getAttribute('data-day')) <= 6; });
+  if(!tabs.length) return;
+  var hoy = (new Date().getDay() || 7) - 1;   // 0 = lunes
+  var conDatos = tabs.filter(function(t){ return t.classList.contains('has-data'); }).length;
+  var faltan = tabs.filter(function(t,i){ return i <= hoy && !t.classList.contains('has-data'); });
+  if(!faltan.length){
+    caja.className = 'avance-sem completo';
+    caja.textContent = '✅ Vas al día — ' + conDatos + ' de 7 días capturados.';
+  }else{
+    var nombres = faltan.map(function(t){ return t.querySelector('.dnom').textContent; }).join(', ');
+    caja.className = 'avance-sem falta';
+    caja.innerHTML = '⏳ Te ' + (faltan.length === 1 ? 'falta' : 'faltan') +
+      ' por capturar: <b>' + nombres + '</b>';
+  }
 }
 
 // ── SUMMARY ─────────────────────────────────────────────────────
@@ -948,6 +1051,7 @@ function updateHeader() {
   const name = input.value;
   document.title = `Check List${name ? ' — ' + name : ''} · León Centro`;
   if (name.trim()) input.classList.remove('input-error');
+  pintarIdent();
   saveChecklistConfig();
 }
 function updateSemana() {
@@ -970,6 +1074,7 @@ function cargarSemanaDesdeFirestore(semana) {
       if (datosPorDia[d]) rellenarDatosDia(d, i, datosPorDia[d]);
     });
     refreshAllCompromisoChecks();
+    pintarAvanceSemana();
     if (currentDay === 7) renderSummary();
   }).catch(() => {});
 }
@@ -1049,7 +1154,14 @@ async function refreshActividad(d, dayIdx, silencioso) {
     const data = await LC.contarActividadDia(attuid, fecha);
     inputMensajes.value = data.mensajes;
     if (inputLlamadas) inputLlamadas.value = data.llamadas;
-    markDirty(dayIdx); renderSummary();
+    // Sólo cuenta como "día con captura" si de verdad hubo actividad.
+    // Antes se marcaba siempre, aunque la consulta devolviera cero, y como
+    // updateSemana() consulta los 7 días al cargar, los siete aparecían
+    // marcados en cada entrada aunque estuvieran vacíos.
+    if (data.mensajes > 0 || data.llamadas > 0) markDirty(dayIdx);
+    else programarAutoguardado(DAYS[dayIdx], dayIdx);
+    pintarAvanceSemana();
+    renderSummary();
     if (status) status.textContent = `✓ Actualizado (${fecha})`;
   } catch (err) {
     if (status) status.textContent = 'No se pudo consultar Firestore.';
@@ -1511,7 +1623,11 @@ if (window.LC) {
         el.setAttribute('readonly', 'readonly');
         el.style.background = 'var(--surface2)';
       });
+      var bEd = document.getElementById('btnEditarIdent');
+      if (bEd) bEd.style.display = 'none';   // viene de la sesión, no se corrige a mano
       updateHeader();
+      pintarIdent();
+      pintarAvanceSemana();
       document.getElementById('name-gate').classList.add('hidden');
       autoSetSemanaActual();
       const semana = document.getElementById('semana-inicio').value;
