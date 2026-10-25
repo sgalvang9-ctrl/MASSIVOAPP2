@@ -1,4 +1,4 @@
-const CACHE_NAME = "leoncentro-v49";
+const CACHE_NAME = "leoncentro-v50";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const CORE_ASSETS = [
   "./gerencia.html",
   "./promos.html",
   "./checklist_salida.html",
+  "./comisiones.html",
   "./llamadas.html",
   "./firebase-init.js",
   "./fotos.js",
