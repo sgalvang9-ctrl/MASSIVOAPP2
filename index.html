@@ -206,6 +206,9 @@
   <button class="tab" id="tabChecklist" onclick="switchTab('checklist')">
     <span class="ic">📋</span> Checklist
   </button>
+  <button class="tab" id="tabComisiones" onclick="switchTab('comisiones')">
+    <span class="ic">💰</span> Comisiones
+  </button>
   <button class="tab hidden" id="tabGerencia" onclick="switchTab('gerencia')">
     <span class="ic">🏪</span> Gerencia
   </button>
@@ -216,11 +219,13 @@
   <div class="loading hidden" id="loadingPromos"><div class="spinner"></div>Cargando Promos…</div>
   <div class="loading hidden" id="loadingLlamadas"><div class="spinner"></div>Cargando Llamadas…</div>
   <div class="loading hidden" id="loadingChecklist"><div class="spinner"></div>Cargando Checklist…</div>
+  <div class="loading hidden" id="loadingComisiones"><div class="spinner"></div>Cargando Comisiones…</div>
   <div class="loading hidden" id="loadingGerencia"><div class="spinner"></div>Cargando Gerencia…</div>
   <iframe id="frameTablero" class="active" src="tablero.html" title="Tablero"></iframe>
   <iframe id="framePromos" title="Promos por WhatsApp"></iframe>
   <iframe id="frameLlamadas" title="Llamadas"></iframe>
   <iframe id="frameChecklist" title="Check List de Salida"></iframe>
+  <iframe id="frameComisiones" title="Esquema de comisiones"></iframe>
   <iframe id="frameGerencia" title="Gerencia"></iframe>
 </div>
 
@@ -283,9 +288,9 @@
 </script>
 
 <script>
-  var TABS = ['tablero', 'promos', 'llamadas', 'checklist', 'gerencia'];
-  var SRC = { promos: 'promos.html', llamadas: 'llamadas.html', checklist: 'checklist_salida.html', gerencia: 'gerencia.html' };
-  var loaded = { tablero: true, promos: false, llamadas: false, checklist: false, gerencia: false };
+  var TABS = ['tablero', 'promos', 'llamadas', 'checklist', 'comisiones', 'gerencia'];
+  var SRC = { promos: 'promos.html', llamadas: 'llamadas.html', checklist: 'checklist_salida.html', comisiones: 'comisiones.html', gerencia: 'gerencia.html' };
+  var loaded = { tablero: true, promos: false, llamadas: false, checklist: false, comisiones: false, gerencia: false };
 
   document.getElementById('frameTablero').addEventListener('load', function(){
     document.getElementById('loadingTablero').classList.add('hidden');
@@ -310,7 +315,7 @@
   }
 
   // ---------- detección de versión nueva ----------
-  var APP_VERSION = "v49";
+  var APP_VERSION = "v50";
   document.getElementById("verChip").textContent = APP_VERSION;
 
   function mostrarAvisoUpdate(reg){

@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Comisiones · León Centro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0b2545; --navy-2:#123a6b; --navy-deep:#081a33;
+    --cyan:#00b6f1; --cyan-soft:#4dcdf7; --cyan-dim:#00b6f114;
+    --oro:#f5b301; --oro-dim:#fff6e0;
+    --paper:#eef2f7; --card:#fff;
+    --ink:#0f1c30; --ink-dim:#5c6b7d; --ink-faint:#636f7e;
+    --line:#e2e8f0;
+    --good:#1e9e5a; --good-bg:#e8f8ef;
+    --warn:#b8790a; --warn-bg:#fdf1de;
+    --radius:16px; --radius-sm:10px;
+    --shadow:0 1px 2px rgba(15,28,48,.04), 0 8px 24px -12px rgba(15,28,48,.10);
+    --fd:'Sora','Inter',sans-serif; --fb:'Inter',-apple-system,sans-serif; --fn:'Roboto Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{overflow-x:hidden;max-width:100vw;}
+  body{margin:0;font-family:var(--fb);background:var(--paper);color:var(--ink);
+    padding-bottom:40px;-webkit-font-smoothing:antialiased;}
+
+  header{position:relative;overflow:hidden;color:#fff;padding:13px 16px 15px;
+    border-radius:0 0 18px 18px;
+    background:radial-gradient(circle at 88% -10%, rgba(0,182,241,.35) 0%, rgba(0,182,241,0) 42%),
+      linear-gradient(150deg, var(--navy-deep) 0%, var(--navy) 55%, var(--navy-2) 100%);}
+  .brand{display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.09em;
+    opacity:.72;font-weight:700;text-transform:uppercase;margin-bottom:3px;}
+  .dot{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 3px rgba(0,182,241,.18);}
+  header h1{margin:0;font-family:var(--fd);font-size:18px;font-weight:800;letter-spacing:-.02em;}
+  header p{margin:4px 0 0;font-size:12.5px;opacity:.8;line-height:1.45;}
+
+  main{max-width:720px;margin:0 auto;padding:14px 12px;}
+
+  /* ── buscador de plan ── */
+  .buscador{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
+  .buscador h2{font-family:var(--fd);font-size:15px;margin:0 0 4px;}
+  .buscador .ay{font-size:12.5px;color:var(--ink-dim);margin:0 0 12px;line-height:1.45;}
+  .buscador select{width:100%;padding:13px;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+    font-size:15px;font-family:var(--fb);background:#fbfcfe;color:var(--ink);min-height:48px;}
+  .resu{margin-top:14px;display:none;}
+  .resu.on{display:block;}
+  .resu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .rc{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px;text-align:center;}
+  .rc .t{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);}
+  .rc .n{font-family:var(--fd);font-size:23px;font-weight:800;color:var(--navy);margin-top:3px;line-height:1.1;}
+  .rc .s{font-size:11px;color:var(--ink-faint);margin-top:2px;}
+  .rc.na .n{color:var(--ink-faint);font-size:16px;}
+  .nota-bono{margin-top:10px;background:var(--oro-dim);border:1px solid #f3dca0;border-radius:var(--radius-sm);
+    padding:10px 12px;font-size:12px;color:#6b4708;line-height:1.45;}
+
+  /* ── secciones ── */
+  .sec{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 4px 9px;}
+  .sec h2{font-family:var(--fd);font-size:15.5px;font-weight:700;margin:0;}
+  .sec .hint{font-size:11.5px;color:var(--ink-faint);}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:15px;box-shadow:var(--shadow);margin-bottom:12px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--ink-faint);padding:0 6px 8px;border-bottom:1.5px solid var(--line);}
+  th.n,td.n{text-align:right;}
+  td{padding:9px 6px;border-bottom:1px solid var(--line);}
+  tr:last-child td{border-bottom:none;}
+  td.plan{font-weight:600;}
+  td.n{font-family:var(--fn);font-weight:700;}
+  tr.top{background:var(--oro-dim);}
+  tr.top td.plan::after{content:" ★";color:var(--oro);}
+
+  .plg{margin-bottom:12px;}
+  .plg > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;font-family:var(--fd);font-size:14px;font-weight:700;color:var(--ink);
+    box-shadow:var(--shadow);min-height:52px;}
+  .plg > summary::-webkit-details-marker{display:none;}
+  .plg > summary::after{content:"⌄";margin-left:auto;font-size:19px;color:var(--ink-faint);transform:translateY(-3px);}
+  .plg[open] > summary::after{content:"⌃";transform:translateY(3px);}
+  .plg[open] > summary{border-radius:var(--radius) var(--radius) 0 0;border-bottom-color:transparent;box-shadow:none;}
+  .plg .cuerpo{border:1px solid var(--line);border-top:none;border-radius:0 0 var(--radius) var(--radius);
+    background:var(--card);padding:15px;}
+  .plg .sub{margin-left:auto;margin-right:10px;font-size:11.5px;font-weight:600;
+    color:var(--ink-faint);font-family:var(--fb);}
+
+  .escala{display:flex;gap:6px;margin:4px 0 2px;}
+  .esc{flex:1;border-radius:10px;padding:11px 8px;text-align:center;border:1px solid var(--line);}
+  .esc .p{font-family:var(--fd);font-size:14px;font-weight:800;line-height:1.1;}
+  .esc .d{font-size:10px;margin-top:3px;font-weight:600;line-height:1.3;}
+  .esc.g1{background:var(--paper);color:var(--ink-dim);}
+  .esc.g2{background:var(--cyan-dim);color:var(--navy-2);border-color:#b9e6f8;}
+  .esc.g3{background:var(--oro-dim);color:#6b4708;border-color:#f3dca0;}
+
+  .lista{margin:0;padding:0;list-style:none;}
+  .lista li{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);
+    font-size:13px;line-height:1.5;color:var(--ink-dim);}
+  .lista li:last-child{border-bottom:none;}
+  .lista .num{flex:none;width:22px;height:22px;border-radius:50%;background:var(--cyan-dim);
+    color:var(--navy-2);font-size:11px;font-weight:800;display:flex;align-items:center;
+    justify-content:center;margin-top:1px;}
+  .lista b{color:var(--ink);}
+
+  .aviso{background:var(--warn-bg);border:1px solid #f2ddb3;border-radius:var(--radius-sm);
+    padding:12px 14px;font-size:12.5px;color:#6b4708;line-height:1.5;margin-top:12px;}
+  .aviso b{color:#4a3005;}
+  .ok-box{background:var(--good-bg);border:1px solid #bfe6cf;border-radius:var(--radius-sm);
+    padding:12px 14px;font-size:12.5px;color:#145c37;line-height:1.5;}
+  .mini{font-size:11.5px;color:var(--ink-faint);line-height:1.5;margin-top:10px;}
+  footer{max-width:720px;margin:20px auto 0;padding:0 16px;font-size:11.5px;
+    color:var(--ink-faint);line-height:1.6;text-align:center;}
+  button:focus-visible, summary:focus-visible, select:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="dot"></span> AT&amp;T · Prime MX</div>
+  <h1>Esquema de comisiones</h1>
+  <p>Ejecutivo de venta en tienda · Programa 2026</p>
+</header>
+
+<main>
+
+  <!-- Buscador: lo primero, porque es lo que se usa con el cliente enfrente -->
+  <section class="buscador">
+    <h2>¿Cuánto me deja este plan?</h2>
+    <p class="ay">Elige el plan y te digo lo que paga al 100% de alcance, con equipo y solo servicio.</p>
+    <select id="selPlan" aria-label="Elige un plan">
+      <option value="">— Elige un plan —</option>
+    </select>
+    <div class="resu" id="resu">
+      <div class="resu-grid">
+        <div class="rc" id="rcEquipo"><div class="t">Con equipo o renovación</div><div class="n">—</div><div class="s">comisión al 100%</div></div>
+        <div class="rc" id="rcServicio"><div class="t">Solo servicio</div><div class="n">—</div><div class="s">comisión al 100%</div></div>
+      </div>
+      <div class="nota-bono" id="notaBono"></div>
+    </div>
+  </section>
+
+  <!-- Cómo funciona -->
+  <div class="sec"><h2>Cómo se arma tu pago</h2><span class="hint">en corto</span></div>
+  <div class="card">
+    <div class="escala">
+      <div class="esc g1"><div class="p">0–80%</div><div class="d">Vas en camino</div></div>
+      <div class="esc g2"><div class="p">80–100%</div><div class="d">Comisión base</div></div>
+      <div class="esc g3"><div class="p">+100%</div><div class="d">Incentivos</div></div>
+    </div>
+    <ul class="lista" style="margin-top:12px">
+      <li><span class="num">1</span><div><b>Cada indicador va por su cuenta</b> y tiene su propia meta. No se compensan entre sí.</div></li>
+      <li><span class="num">2</span><div>Del <b>80% al 100%</b> de alcance de la tienda cobras tu comisión base.</div></li>
+      <li><span class="num">3</span><div><b>Pospago solo servicio</b> solo comisiona si llegas al <b>80% o más en Pospago con equipo</b>.</div></li>
+      <li><span class="num">4</span><div>Al llegar al <b>100%</b> se prenden aceleradores e incentivos.</div></li>
+      <li><span class="num">5</span><div>Tu comisión base semanal está <b>topada al 100%</b>. Lo que rebases no se pierde: se guarda como acelerador y se paga a fin de mes.</div></li>
+    </ul>
+  </div>
+
+  <!-- Tablas -->
+  <div class="sec"><h2>Tablas de comisión</h2><span class="hint">al 100% de alcance</span></div>
+
+  <details class="plg" open>
+    <summary>📱 Pospago con equipo y renovaciones <span class="sub">prioridad 1</span></summary>
+    <div class="cuerpo">
+      <table>
+        <thead><tr><th>Plan</th><th class="n">Renta</th><th class="n">Comisión</th></tr></thead>
+        <tbody id="tEquipo"></tbody>
+      </table>
+      <div class="mini">Entre mejor el plan, más ganas. Es el corazón de tu comisión.</div>
+    </div>
+  </details>
+
+  <details class="plg">
+    <summary>📶 Pospago solo servicio <span class="sub">prioridad 2</span></summary>
+    <div class="cuerpo">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);margin-bottom:8px;">Planes Premium</div>
+      <table>
+        <thead><tr><th>Plan</th><th class="n">Renta</th><th class="n">Comisión</th></tr></thead>
+        <tbody id="tServicio"></tbody>
+      </table>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);margin:18px 0 8px;">Planes Lite</div>
+      <table>
+        <thead><tr><th>Plan</th><th class="n">Renta</th><th class="n">Comisión</th></tr></thead>
+        <tbody id="tLite"></tbody>
+      </table>
+      <div class="aviso">
+        <b>Para cobrar esta comisión</b> necesitas al menos <b>80% de la meta de Pospago con equipo</b> y <b>80% de la meta de solo servicio</b>.<br>
+        <b>AT&amp;T Lite 0</b> solo cuenta para alcance y comisión cuando la venta es una <b>migración</b>.
+      </div>
+    </div>
+  </details>
+
+  <details class="plg">
+    <summary>🛡️ Seguros <span class="sub">prioridad 1.5</span></summary>
+    <div class="cuerpo">
+      <table>
+        <thead><tr><th>Precio del equipo</th><th class="n">Costo mensual</th><th class="n">Comisión</th></tr></thead>
+        <tbody id="tSeguros"></tbody>
+      </table>
+      <div class="mini">Se venden sobre pospago con equipo. La comisión crece en proporción a Pospago con equipo y renovaciones.</div>
+    </div>
+  </details>
+
+  <details class="plg">
+    <summary>🏢 Venta empresarial <span class="sub">A Negocios</span></summary>
+    <div class="cuerpo">
+      <table>
+        <thead><tr><th>Plan</th><th class="n">Con equipo</th><th class="n">Solo servicio</th></tr></thead>
+        <tbody id="tNegocios"></tbody>
+      </table>
+      <div class="aviso">
+        Las renovaciones de <b>solo servicio</b> generan comisión únicamente en plazos de <b>24 meses o más</b>.<br>
+        Los pospagos empresariales, con o sin equipo, y las renovaciones con equipo cuentan para alcance y generan comisión.
+      </div>
+    </div>
+  </details>
+
+  <details class="plg">
+    <summary>🎧 Accesorios, prepago y add-ons <span class="sub">prioridad 3 y 4</span></summary>
+    <div class="cuerpo">
+      <table>
+        <thead><tr><th>Concepto</th><th class="n">Comisión</th></tr></thead>
+        <tbody>
+          <tr><td class="plan">Accesorios ALPHACOMM</td><td class="n">10% del valor</td></tr>
+          <tr><td class="plan">Accesorios otras marcas</td><td class="n">2% del valor</td></tr>
+          <tr><td class="plan">Prepago</td><td class="n">40% de la recarga</td></tr>
+          <tr><td class="plan">Add-ons</td><td class="n">80% del valor</td></tr>
+        </tbody>
+      </table>
+      <div class="aviso">
+        <b>Prepago:</b> requiere recarga inicial mínima de <b>$150</b>. Los prepagos con recarga inicial de $50 o menos <b>no cuentan para alcance</b>, y la comisión de prepago tiene un <b>tope de $100</b>.
+      </div>
+    </div>
+  </details>
+
+  <!-- Incentivos -->
+  <div class="sec"><h2>Al llegar al 100%</h2><span class="hint">se prenden tus incentivos</span></div>
+
+  <div class="card">
+    <div style="font-family:var(--fd);font-size:14px;font-weight:700;margin-bottom:3px;">Bono de valor</div>
+    <div style="font-size:12px;color:var(--ink-dim);margin-bottom:11px;">Pago semanal · solo pospago con equipo y renovaciones</div>
+    <div class="escala">
+      <div class="esc g1"><div class="p">$100</div><div class="d">Plan Plata</div></div>
+      <div class="esc g3"><div class="p">$150</div><div class="d">Plan Oro</div></div>
+      <div class="esc g2"><div class="p">$200</div><div class="d">Black y superiores</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-family:var(--fd);font-size:14px;font-weight:700;margin-bottom:3px;">Aceleradores de alcance</div>
+    <div style="font-size:12px;color:var(--ink-dim);margin-bottom:11px;">Pago mensual · todos los indicadores, desde 105% de alcance de la semana, sobre tu comisión base</div>
+    <div class="escala">
+      <div class="esc g2"><div class="p">+10%</div><div class="d">105 – 109%</div></div>
+      <div class="esc g3"><div class="p">+15%</div><div class="d">110 – 119%</div></div>
+      <div class="esc g3"><div class="p">+20%</div><div class="d">120% o más</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-family:var(--fd);font-size:14px;font-weight:700;margin-bottom:3px;">Incentivo de marcas</div>
+    <div style="font-size:12px;color:var(--ink-dim);line-height:1.5;">Pago mensual. Comisionan de manera independiente en pospago con equipo y renovaciones al lograr el 100% de alcance. Valida condiciones y vigencia de cada incentivo con tu gerente.</div>
+  </div>
+
+  <!-- Condiciones -->
+  <div class="sec"><h2>Condiciones</h2><span class="hint">aplican a todos los indicadores</span></div>
+  <div class="card">
+    <ul class="lista">
+      <li><span class="num">1</span><div><b>Piso mínimo de 2 ventas a la semana</b> para activar tus comisiones. Puede ser 1 pospago con equipo + 1 renovación, o 2 líneas de pospago con equipo.</div></li>
+      <li><span class="num">2</span><div>Para aceleradores e incentivos de pospago, la <b>tienda</b> debe cerrar la semana con ARPU de <b>$400 o más en solo servicio</b> y <b>$700 o más con equipo</b>. Son independientes entre sí.</div></li>
+      <li><span class="num">3</span><div>Los incentivos mensuales se pagan <b>antes del día 15 del mes siguiente</b>.</div></li>
+      <li><span class="num">4</span><div><b>Renovaciones anticipadas:</b> con vigencia mayor a 6 y hasta 12 meses generan el <b>50% de la comisión</b>. Con 6 meses o menos no generan comisión ni cuentan para alcance.</div></li>
+      <li><span class="num">5</span><div><b>Cálculo del ARPU:</b> con equipo se calcula solo con planes <b>Premium</b>. Sin equipo (solo servicio) se calcula con <b>Premium y Lite</b>.</div></li>
+      <li><span class="num">6</span><div>Las <b>ventas carrusel</b> y las <b>cancelaciones del mismo mes</b> no se pagan y no cuentan para alcance.</div></li>
+      <li><span class="num">7</span><div>Los planes <b>Simple y Simple Plus</b> no cuentan para alcance.</div></li>
+    </ul>
+    <div class="aviso">
+      Cuidamos la calidad de la venta: las líneas con <b>chargeback</b> o <b>canceladas en el mismo mes</b> se ajustan de tu comisión.
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Esquema PrimeMX · Distribuidor AT&amp;T México · Programa 2026.<br>
+  Esta pantalla es una guía de consulta. Ante cualquier diferencia, manda el documento oficial del esquema.
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  function esc(v){ return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+  function mx(n){ return "$" + Number(n).toLocaleString("es-MX"); }
+
+  // ── Esquema 2026. Un solo lugar de la verdad: si cambia el esquema,
+  //    se cambia aquí y toda la pantalla se actualiza sola.
+  var EQUIPO = [
+    ["AT&T Azul 1",330,100],["AT&T Azul 2",435,180],["AT&T Azul 3",550,440],
+    ["AT&T Plata",650,530],["AT&T Oro",725,590],["AT&T Black",825,670,true],
+    ["AT&T Platino",1035,800],["AT&T Diamante",1300,800],["AT&T Titanio",1499,670],
+    ["AT&T Titanio Trade In",1499,335]
+  ];
+  var SERVICIO = [
+    ["AT&T Azul 1",330,100],["AT&T Azul 2",435,120,true],["AT&T Azul 3",550,230],
+    ["AT&T Plata",650,265],["AT&T Oro",725,295],["AT&T Black",825,335],
+    ["AT&T Platino",1035,400],["AT&T Diamante",1300,400],["AT&T Titanio",1499,335]
+  ];
+  var LITE = [
+    ["AT&T Lite 0 · solo migraciones",299,40],["AT&T Lite 1",349,110],
+    ["AT&T Lite 2",449,150,true],["AT&T Lite 3",549,220],["AT&T Lite 4",669,265],
+    ["AT&T Lite 5",999,315],["AT&T Ilimitado",1499,400]
+  ];
+  var SEGUROS = [
+    ["$500 – $4,000",99,70],["$4,001 – $6,000",159,112],["$6,001 – $13,000",219,153],
+    ["$13,001 – $38,000",254,178],["$38,001 – $60,000",279,195]
+  ];
+  var NEGOCIOS = [
+    ["A Negocios 239",239,50,25],["A Negocios 299",299,87,44],["A Negocios 399",399,200,100],
+    ["A Negocios 499",499,419,210],["A Negocios 599",599,503,252],["A Negocios 699",699,587,294],
+    ["A Negocios 799",799,671,336],["A Negocios 899",899,755,378],["A Negocios 999",999,839,420],
+    ["A Negocios 1299",1299,1091,546],["A Negocios 1499",1499,1259,630]
+  ];
+  // Bono de valor por unidad, solo pospago con equipo y renovaciones
+  var BONO = { "AT&T Plata":100, "AT&T Oro":150, "AT&T Black":200,
+               "AT&T Platino":200, "AT&T Titanio":200, "AT&T Diamante":200 };
+
+  function fila3(f){
+    return '<tr class="' + (f[3] ? 'top' : '') + '"><td class="plan">' + esc(f[0]) +
+      '</td><td class="n">' + mx(f[1]) + '</td><td class="n">' + mx(f[2]) + '</td></tr>';
+  }
+  document.getElementById("tEquipo").innerHTML   = EQUIPO.map(fila3).join("");
+  document.getElementById("tServicio").innerHTML = SERVICIO.map(fila3).join("");
+  document.getElementById("tLite").innerHTML     = LITE.map(fila3).join("");
+  document.getElementById("tSeguros").innerHTML  = SEGUROS.map(function(f){
+    return '<tr><td class="plan">' + esc(f[0]) + '</td><td class="n">' + mx(f[1]) +
+           '</td><td class="n">' + mx(f[2]) + '</td></tr>'; }).join("");
+  document.getElementById("tNegocios").innerHTML = NEGOCIOS.map(function(f){
+    return '<tr><td class="plan">' + esc(f[0]) + '</td><td class="n">' + mx(f[2]) +
+           '</td><td class="n">' + mx(f[3]) + '</td></tr>'; }).join("");
+
+  // ── Buscador: junta cada plan con lo que paga de los dos lados ──
+  var INDICE = {};
+  function mete(nombre, renta, campo, valor){
+    if(!INDICE[nombre]) INDICE[nombre] = { nombre:nombre, renta:renta, equipo:null, servicio:null };
+    INDICE[nombre][campo] = valor;
+  }
+  EQUIPO.forEach(function(f){ mete(f[0], f[1], "equipo", f[2]); });
+  SERVICIO.forEach(function(f){ mete(f[0], f[1], "servicio", f[2]); });
+  LITE.forEach(function(f){ mete(f[0], f[1], "servicio", f[2]); });
+  NEGOCIOS.forEach(function(f){ mete(f[0], f[1], "equipo", f[2]); mete(f[0], f[1], "servicio", f[3]); });
+
+  var orden = Object.keys(INDICE).sort(function(a,b){ return INDICE[a].renta - INDICE[b].renta; });
+  var sel = document.getElementById("selPlan");
+  sel.innerHTML = '<option value="">— Elige un plan —</option>' + orden.map(function(k){
+    return '<option value="' + esc(k) + '">' + esc(k) + ' · ' + mx(INDICE[k].renta) + '</option>';
+  }).join("");
+
+  sel.addEventListener("change", function(){
+    var p = INDICE[sel.value];
+    var caja = document.getElementById("resu");
+    if(!p){ caja.classList.remove("on"); return; }
+
+    function pinta(id, valor, noAplica){
+      var c = document.getElementById(id);
+      c.classList.toggle("na", valor === null);
+      c.querySelector(".n").textContent = valor === null ? "No aplica" : mx(valor);
+      c.querySelector(".s").textContent = valor === null ? noAplica : "comisión al 100%";
+    }
+    pinta("rcEquipo",   p.equipo,   "este plan no va con equipo");
+    pinta("rcServicio", p.servicio, "este plan no va solo servicio");
+
+    var nota = document.getElementById("notaBono");
+    var b = BONO[p.nombre];
+    var txt = [];
+    if(b) txt.push("Con equipo o renovación, este plan también te da <b>" + mx(b) +
+                   " de bono de valor</b> por unidad al llegar al 100%.");
+    if(p.nombre.indexOf("Lite 0") !== -1) txt.push("Solo cuenta cuando la venta es una <b>migración</b>.");
+    if(p.nombre.indexOf("Trade In") !== -1) txt.push("Trade In paga la mitad que el Titanio normal.");
+    if(p.nombre.indexOf("Negocios") !== -1) txt.push("En empresarial, las renovaciones de solo servicio comisionan únicamente a <b>24 meses o más</b>.");
+    nota.innerHTML = txt.length ? txt.join("<br>") : "Recuerda: estas cifras son al 100% de alcance de la tienda.";
+    caja.classList.add("on");
+  });
+})();
+</script>
+</body>
+</html>
